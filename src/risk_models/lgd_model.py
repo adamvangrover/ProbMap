@@ -19,6 +19,7 @@ import datetime # For model versioning
 
 from src.core.config import settings
 from src.data_management.knowledge_base import KnowledgeBaseService
+# Already imported ModelRegistry in the previous diff for PDModel, but good to ensure it's here for LGDModel context
 from src.mlops.model_registry import ModelRegistry # For model registration
 
 logger = logging.getLogger(__name__)
@@ -156,6 +157,11 @@ class LGDModel:
         self.save_model()
 
         # Automate model registration
+        if "error" not in metrics and self.model: # Ensure model exists before getting params
+            try:
+                registry = ModelRegistry()
+                model_params = self.model.named_steps['regressor'].get_params()
+
         if "error" not in metrics:
             try:
                 registry = ModelRegistry()
@@ -173,6 +179,10 @@ class LGDModel:
                 logger.info(f"LGDModel version {model_version} registered successfully.")
             except Exception as e:
                 logger.error(f"Error during model registration for LGDModel: {e}")
+        elif not self.model and "error" not in metrics:
+            logger.warning("LGDModel training seemed successful but model object is None. Skipping registration.")
+
+
 
         return metrics
 
@@ -228,6 +238,8 @@ class LGDModel:
 
     def load_model(self) -> bool:
         model_loaded_successfully = False
+        # Try loading from the specific model_path first (if it exists)
+
         if self.model_path.exists():
             try:
                 self.model = joblib.load(self.model_path)
@@ -235,7 +247,8 @@ class LGDModel:
                 model_loaded_successfully = True
             except Exception as e:
                 logger.error(f"Error loading LGD model from {self.model_path}: {e}. Trying registry.")
-                self.model = None
+                self.model = None # Ensure model is None if loading fails
+
 
         if not model_loaded_successfully:
             logger.info(f"Model file not found at {self.model_path} or failed to load. Attempting to load 'production' model from registry.")
@@ -246,7 +259,8 @@ class LGDModel:
                     prod_model_path = Path(prod_model_path_str)
                     if prod_model_path.exists():
                         self.model = joblib.load(prod_model_path)
-                        self.model_path = prod_model_path # Update model_path
+                        self.model_path = prod_model_path # Update model_path to the one loaded
+
                         logger.info(f"LGD Model (production) loaded from registry path: {self.model_path}")
                         model_loaded_successfully = True
                     else:
@@ -255,10 +269,11 @@ class LGDModel:
                     logger.warning("No production LGDModel found in registry.")
             except Exception as e:
                 logger.error(f"Error loading production LGDModel from registry: {e}")
-                self.model = None
+                self.model = None # Ensure model is None if registry loading fails
 
         if not model_loaded_successfully:
-            logger.warning(f"LGD Model could not be loaded from specified path or registry.")
+             logger.warning(f"LGD Model could not be loaded from specified path or registry.")
+
 
         return model_loaded_successfully
 

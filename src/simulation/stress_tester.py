@@ -6,7 +6,7 @@ import pandas as pd
 from src.risk_models.pd_model import PDModel
 from src.risk_models.lgd_model import LGDModel
 from src.data_management.knowledge_base import KnowledgeBaseService # For getting original data if needed
-from src.risk_map.risk_map_service import RiskMapService # To re-calculate portfolio overview under stress
+# from src.risk_map.risk_map_service import RiskMapService # Not directly used here
 
 logger = logging.getLogger(__name__)
 
