@@ -1,8 +1,18 @@
-pandas
-numpy
-scikit-learn
-fastapi
-uvicorn
-pydantic
-python-dotenv
-networkx
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+pandas>=1.5.0
+numpy>=1.20.0
+scikit-learn>=1.1.0
+networkx>=2.8.0
+joblib>=1.1.0
+shap>=0.41.0
+
+# Optional, often transitive dependencies of FastAPI, but good for explicitness
+# Jinja2>=3.0.0
+# python-multipart (for form data, if used by FastAPI)
+# itsdangerous (for secure cookie signing, if used)
+# ujson (faster JSON, optional, FastAPI might use it if available)
+# orjson (another faster JSON, optional)

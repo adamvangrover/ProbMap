@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Risk Analysis System Overview</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; line-height: 1.6; background-color: #f9f9f9; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        nav ul { list-style-type: none; padding: 0; background-color: #34495e; text-align: center; }
+        nav ul li { display: inline; margin-right: 0; }
+        nav ul li a { display: inline-block; padding: 15px 20px; text-decoration: none; color: white; }
+        nav ul li a:hover { background-color: #4e667f; }
+        .container { max-width: 1000px; margin: auto; background-color: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #eee; border-radius: 5px; background-color: #fff; }
+        .section h2 { border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .code-block { background-color: #f4f4f4; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        table.data-table { border-collapse: collapse; width: 100%; margin-bottom:15px; font-size: 0.9em; } /* Adjusted for full width */
+        table.data-table th, table.data-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        table.data-table th { background-color: #3498db; color: white; }
+        table.data-table tr:nth-child(even) { background-color: #f2f2f2; }
+        img { max-width: 100%; height: auto; border: 1px solid #ddd; margin-top:10px; margin-bottom:10px; border-radius: 4px;}
+        ul li { margin-bottom: 8px; }
+        footer { text-align: center; margin-top: 30px; padding: 15px; font-size: 0.9em; color: #777; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="section" style="background-color: #ecf0f1; border-color: #bdc3c7;">
+            <h1 style="text-align:center;">Proprietary Credit Risk Probability Map - System Overview</h1>
+            <nav>
+                <ul>
+                    <li><a href="#introduction">Introduction</a></li>
+                    <li><a href="#capabilities">Capabilities</a></li>
+                    <li><a href="#walkthrough">Walkthrough</a></li>
+                    <li><a href="#snapshot">Notebook Snapshot</a></li>
+                    <li><a href="#outputs">Other Outputs</a></li>
+                    <li><a href="README_Analysis.md">Full README</a></li>
+                    <li><a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">Full Analysis Notebook</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <section id="introduction" class="section">
+            <h2>1. Introduction</h2>
+            <p>This document provides an overview of the Evolved Credit Risk Analysis System, a proof-of-concept designed to offer a holistic and dynamic view of credit risk. It integrates quantitative models, qualitative data, knowledge graph context, and scenario analysis to provide a comprehensive assessment framework.</p>
+            <p>The system operates on a synthetic, file-based dataset for demonstration purposes. For full technical details, setup instructions, and in-depth explanations, please refer to the <a href="README_Analysis.md">Full System README</a>.</p>
+        </section>
+
+        <section id="capabilities" class="section">
+            <h2>2. System Capabilities</h2>
+            <ul>
+                <li><strong>Expanded Ontology & Rich Data Model:</strong> Defines core financial concepts using Pydantic models for structured data representation.</li>
+                <li><strong>Integrated Knowledge Graph:</strong> Captures interconnections (subsidiaries, suppliers, guarantors) and provides contextual insights like network centrality.</li>
+                <li><strong>Advanced Risk Models:</strong> Utilizes a Random Forest Classifier for Probability of Default (PD) and a Gradient Boosting Regressor for Loss Given Default (LGD), both incorporating enhanced feature engineering.</li>
+                <li><strong>SHAP Explainability for PD Model:</strong> Offers insights into the drivers of PD model predictions.</li>
+                <li><strong>Dynamic Pricing Model:</strong> Calculates loan interest rates based on PD, LGD, customer segments, and knowledge graph context.</li>
+                <li><strong>Comprehensive Risk Mapping Service:</strong> Aggregates portfolio-wide risk, including qualitative scores and KG metrics, with summaries by sector and country.</li>
+                <li><strong>MLOps Framework (PoC):</strong> Features automated model registration, loading of "production" models, prediction logging, data drift detection (numerical & categorical), and simulated performance monitoring.</li>
+                <li><strong>Sophisticated Scenario Simulation:</strong> Allows for feature-level shocks to raw data, with PD/LGD re-calculated by models to assess stress impact realistically.</li>
+            </ul>
+        </section>
+
+        <section id="walkthrough" class="section">
+            <h2>3. Walkthrough / How to Use</h2>
+            <p>To get started with the system:</p>
+            <ol>
+                <li>Ensure Python 3.9+ is installed and set up a virtual environment.</li>
+                <li>Install dependencies: <code class="code-block" style="display:inline; padding: 2px 5px;">pip install -r requirements.txt</code></li>
+                <li>Train the PD and LGD models by running their respective scripts (e.g., <code class="code-block" style="display:inline; padding: 2px 5px;">python -m src.risk_models.pd_model</code>). This also registers them.</li>
+                <li>Generate system outputs like the orchestration manifest: <code class="code-block" style="display:inline; padding: 2px 5px;">python scripts/generate_outputs.py</code>.</li>
+                <li>Explore the <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">Comprehensive Analysis Notebook</a> for an interactive demonstration of the system's capabilities.</li>
+            </ol>
+            <p>For detailed setup and execution instructions, please see the <a href="README_Analysis.md#3-setup-and-running-the-system">Setup and Running the System section in the full README</a>.</p>
+        </section>
+
+        <section id="snapshot" class="section">
+            <h2>4. "Probability Map" - Notebook Snapshot/Summary</h2>
+            <p>The <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">Comprehensive Analysis Notebook</a> is the primary interface for visualizing and interacting with the "Probability Map". It synthesizes data from all components to provide risk insights. Below are conceptual snapshots:</p>
+
+            <h3>Illustrative Portfolio Risk/Return Landscape</h3>
+            <p>This conceptual plot positions different asset classes (corporate loans, synthetic equities, synthetic commodities) in a risk-return space. Bubble size can represent exposure or market capitalization.</p>
+            <img src="output/plot_portfolio_risk_return.png" alt="Portfolio Risk-Return Landscape (Conceptual)">
+
+            <h3>Example Peer Comparison</h3>
+            <p>The notebook allows for deep dives into specific entities, including comparison against synthetic peers on key metrics.</p>
+            <img src="output/plot_peer_comparison.png" alt="Peer Comparison Chart (Conceptual)">
+
+            <h3>Key Portfolio Data Snippet</h3>
+            <p>The portfolio overview generated by the RiskMapService provides a rich table of data. Here's a small sample of what the structure looks like (actual data will vary based on the synthetic dataset):</p>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>loan_id</th>
+                  <th>company_id</th>
+                  <th>company_name</th>
+                  <th>pd_estimate</th>
+                  <th>lgd_estimate</th>
+                  <th>expected_loss_usd</th>
+                  <th>management_quality_score</th>
+                  <th>kg_degree_centrality</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>LOAN7001</td>
+                  <td>COMP001</td>
+                  <td>Innovatech Solutions</td>
+                  <td>0.0452</td>
+                  <td>0.3875</td>
+                  <td>87567.50</td>
+                  <td>8</td>
+                  <td>0.052</td>
+                </tr>
+                <tr>
+                  <td>LOAN7003</td>
+                  <td>COMP002</td>
+                  <td>GreenBuild Corp</td>
+                  <td>0.0911</td>
+                  <td>0.5210</td>
+                  <td>47463.10</td>
+                  <td>7</td>
+                  <td>0.030</td>
+                </tr>
+                <tr>
+                  <td>LOAN7004</td>
+                  <td>COMP003</td>
+                  <td>HealthFirst Pharma</td>
+                  <td>0.1530</td>
+                  <td>0.6050</td>
+                  <td>92565.00</td>
+                  <td>9</td>
+                  <td>0.040</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>Deep Dive Snapshot: Example Company Analysis</h3>
+            <p>For a selected company (e.g., Innovatech Solutions - COMP001), a deep dive in the notebook might summarize key risk factors (actual values from a run):</p>
+            <ul>
+                <li><strong>Quantitative Scores:</strong> PD: 0.0452, LGD: 0.3875, Base EL: $87,567.50</li>
+                <li><strong>Financial Health (Latest FS):</strong> D/E: 0.67, Current Ratio: 2.20. Overall: Good</li>
+                <li><strong>PD Model Drivers (SHAP Top 3):</strong> debt_to_equity_ratio, company_age_at_origination, net_profit_margin.</li>
+                <li><strong>Knowledge Graph Context:</strong> Centrality: 0.052, Suppliers: 2, Customers: 1, Subsidiaries: 0. Implications: Moderate network activity, some supplier concentration.</li>
+                <li><strong>Qualitative Factors:</strong> Management Quality Score: 8.</li>
+                <li><strong>Stress Test Impact (Targeted Shock for COMP001):</strong> Stressed EL: $131,351.25 (Change: 50.00 %). Resilience: Moderate.</li>
+            </ul>
+            <p>This multi-faceted view helps in forming a comprehensive risk opinion. For the full interactive analysis, please <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">refer to the notebook</a>.</p>
+        </section>
+
+        <section id="outputs" class="section">
+            <h2>5. Other Generated Outputs</h2>
+            <p>The system can generate structured metadata and data files:</p>
+            <ul>
+                <li><a href="output/orchestration_manifest.json">Orchestration Manifest (JSON)</a>: Describes data sources, active models, and key services.</li>
+                <li><a href="output/risk_profiles.jsonld">Sample Risk Profiles (JSON-LD)</a>: Example company risk profiles in a linked data format.</li>
+            </ul>
+        </section>
+
+        <footer>
+            <p>This system is a Proof of Concept and demonstrates a comprehensive approach to credit risk analysis using synthetic data. For detailed information, please refer to the <a href="README_Analysis.md">Full README</a> and the <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">analysis notebook</a>.</p>
+        </footer>
+    </div>
+</body>
+</html>
