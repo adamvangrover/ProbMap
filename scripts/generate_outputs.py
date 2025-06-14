@@ -108,6 +108,7 @@ def generate_orchestration_manifest():
             "path": "output/plot_peer_comparison.png",
             "description": "Static plot from analysis notebook showing conceptual company vs. peer metrics."
         }
+
     ]
 
     manifest = {
