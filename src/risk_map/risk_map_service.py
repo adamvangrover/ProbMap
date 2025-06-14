@@ -5,7 +5,7 @@ from src.data_management.knowledge_base import KnowledgeBaseService
 from src.data_management.ontology import LoanAgreement, CorporateEntity
 from src.risk_models.pd_model import PDModel
 from src.risk_models.lgd_model import LGDModel
-# from src.data_management.knowledge_graph import KnowledgeGraphService # Optional: for contextual data
+from src.data_management.knowledge_graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +18,13 @@ class RiskMapService:
     def __init__(self,
                  kb_service: KnowledgeBaseService,
                  pd_model: PDModel,
-                 lgd_model: LGDModel
-                 # kg_service: Optional[KnowledgeGraphService] = None # Future use
+                 lgd_model: LGDModel,
+                 kg_service: Optional[KnowledgeGraphService] = None
                  ):
         self.kb_service = kb_service
         self.pd_model = pd_model
         self.lgd_model = lgd_model
-        # self.kg_service = kg_service
+        self.kg_service = kg_service
 
         # Ensure models are loaded if they are not already trained/in memory
         if self.pd_model.model is None:
@@ -79,10 +79,12 @@ class RiskMapService:
             lgd_estimate = -1.0 # Default/Error value
             if self.lgd_model.model is not None:
                 # LGD model expects a dictionary of features
+                # Align with features expected by the enhanced LGDModel
                 lgd_features = {
                     'collateral_type': loan.collateral_type.value if loan.collateral_type else 'None',
-                    'loan_amount_usd': loan.loan_amount
-                    # Add any other features the LGD model was trained on
+                    'loan_amount_usd': loan.loan_amount,
+                    'seniority_of_debt': str(loan.seniority_of_debt) if loan.seniority_of_debt else 'Unknown',
+                    'economic_condition_indicator': loan.economic_condition_indicator if loan.economic_condition_indicator is not None else 0.5
                 }
                 lgd_estimate = self.lgd_model.predict_lgd(lgd_features)
             else:
@@ -90,8 +92,6 @@ class RiskMapService:
                 lgd_estimate = 0.75 # Default LGD
 
             # 3. Calculate Expected Loss (EL)
-            # EL = PD * LGD * EAD (Exposure at Default)
-            # For PoC, EAD = current loan_amount. In reality, EAD can be more complex.
             ead = loan.loan_amount
             expected_loss = pd_probability * lgd_estimate * ead if pd_probability >=0 and lgd_estimate >=0 else -1
 
@@ -99,7 +99,9 @@ class RiskMapService:
                 "loan_id": loan.loan_id,
                 "company_id": company.company_id,
                 "company_name": company.company_name,
-                "industry_sector": company.industry_sector.value,
+                "industry_sector": company.industry_sector.value if company.industry_sector else 'N/A',
+                "country_iso_code": company.country_iso_code if company.country_iso_code else 'N/A',
+                "management_quality_score": company.management_quality_score if hasattr(company, 'management_quality_score') and company.management_quality_score is not None else 'N/A',
                 "loan_amount_usd": loan.loan_amount,
                 "pd_estimate": round(pd_probability, 4),
                 "lgd_estimate": round(lgd_estimate, 4),
@@ -107,15 +109,22 @@ class RiskMapService:
                 "expected_loss_usd": round(expected_loss, 2) if expected_loss >=0 else "N/A",
                 "currency": loan.currency.value,
                 "collateral_type": loan.collateral_type.value if loan.collateral_type else "None",
-                "is_defaulted": loan.default_status # From KB
+                "is_defaulted": loan.default_status,
+                # KG-derived fields (default to N/A)
+                "kg_degree_centrality": "N/A",
+                "kg_num_suppliers": "N/A",
+                "kg_num_customers": "N/A",
+                "kg_num_subsidiaries": "N/A"
             }
 
             # Add more contextual info from Knowledge Graph if available
-            # if self.kg_service:
-            #     company_node = self.kg_service.get_node_attributes(company.company_id)
-            #     if company_node:
-            #         risk_item["connected_entities_count"] = len(self.kg_service.get_neighbors(company.company_id))
-
+            if self.kg_service and self.kg_service.graph.has_node(company.company_id):
+                context_info = self.kg_service.get_company_contextual_info(company.company_id)
+                if context_info:
+                    risk_item["kg_degree_centrality"] = round(context_info.get('degree_centrality', -1.0), 4) if context_info.get('degree_centrality', -1.0) != -1.0 else "N/A"
+                    risk_item["kg_num_suppliers"] = context_info.get('num_suppliers', 'N/A')
+                    risk_item["kg_num_customers"] = context_info.get('num_customers', 'N/A')
+                    risk_item["kg_num_subsidiaries"] = context_info.get('num_subsidiaries', 'N/A')
 
             portfolio_risk_data.append(risk_item)
 
@@ -168,6 +177,50 @@ class RiskMapService:
         logger.info(f"Generated risk summary for {len(sector_summary)} sectors.")
         return sector_summary
 
+    def get_risk_summary_by_country(self, portfolio_overview: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Dict[str, Any]]:
+        """
+        Aggregates risk metrics by country.
+        """
+        if portfolio_overview is None:
+            portfolio_overview = self.generate_portfolio_risk_overview()
+
+        country_summary: Dict[str, Dict[str, Any]] = {}
+
+        for item in portfolio_overview:
+            country_code = item.get("country_iso_code", "Unknown") # Use .get() for safety
+            if country_code not in country_summary:
+                country_summary[country_code] = {
+                    "total_exposure": 0.0,
+                    "total_expected_loss": 0.0,
+                    "loan_count": 0,
+                    "average_pd": [],
+                    "average_lgd": [],
+                    "defaulted_loan_count": 0
+                }
+
+            current_el = item["expected_loss_usd"] if item["expected_loss_usd"] != "N/A" else 0
+
+            country_summary[country_code]["total_exposure"] += item["exposure_at_default_usd"]
+            country_summary[country_code]["total_expected_loss"] += current_el
+            country_summary[country_code]["loan_count"] += 1
+            if item["pd_estimate"] >= 0:
+                 country_summary[country_code]["average_pd"].append(item["pd_estimate"])
+            if item["lgd_estimate"] >= 0:
+                country_summary[country_code]["average_lgd"].append(item["lgd_estimate"])
+            if item["is_defaulted"]:
+                country_summary[country_code]["defaulted_loan_count"] +=1
+
+        # Calculate averages
+        for country_code, data in country_summary.items():
+            avg_pd = sum(data["average_pd"]) / len(data["average_pd"]) if data["average_pd"] else 0
+            avg_lgd = sum(data["average_lgd"]) / len(data["average_lgd"]) if data["average_lgd"] else 0
+            country_summary[country_code]["average_pd"] = round(avg_pd, 4)
+            country_summary[country_code]["average_lgd"] = round(avg_lgd, 4)
+            country_summary[country_code]["total_expected_loss"] = round(data["total_expected_loss"], 2)
+
+        logger.info(f"Generated risk summary for {len(country_summary)} countries.")
+        return country_summary
+
 
 if __name__ == "__main__":
     # Setup for standalone testing
@@ -217,15 +270,19 @@ if __name__ == "__main__":
 
     # Proceed only if models are available
     if pd_m.model and lgd_m.model:
-        risk_map_service = RiskMapService(kb_service=kb, pd_model=pd_m, lgd_model=lgd_m)
+        # Initialize KnowledgeGraphService
+        logger.info("Initializing KnowledgeGraphService for RiskMapService test...")
+        kg_service = KnowledgeGraphService(kb_service=kb)
+        # kg_service._populate_graph_from_kb() # Already called in KG __init__ if kb_service is provided
+
+        risk_map_service = RiskMapService(kb_service=kb, pd_model=pd_m, lgd_model=lgd_m, kg_service=kg_service)
 
         # Generate portfolio overview
         portfolio_data = risk_map_service.generate_portfolio_risk_overview()
         if portfolio_data:
             logger.info(f"Generated {len(portfolio_data)} items for portfolio risk overview.")
             logger.info("First item in portfolio overview:")
-            # Using json.dumps for pretty printing the dictionary
-            import json
+            import json # Import json for pretty printing
             logger.info(json.dumps(portfolio_data[0], indent=2))
         else:
             logger.warning("Portfolio risk overview is empty.")
@@ -237,5 +294,13 @@ if __name__ == "__main__":
             logger.info(json.dumps(sector_summary_data, indent=2))
         else:
             logger.warning("Sector summary is empty.")
+
+        # Generate summary by country
+        country_summary_data = risk_map_service.get_risk_summary_by_country(portfolio_overview=portfolio_data)
+        if country_summary_data:
+            logger.info("Generated risk summary by country:")
+            logger.info(json.dumps(country_summary_data, indent=2))
+        else:
+            logger.warning("Country summary is empty.")
     else:
         logger.error("RiskMapService could not be initialized due to missing models. Tests aborted.")
