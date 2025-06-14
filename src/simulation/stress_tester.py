@@ -113,55 +113,57 @@ class StressTester:
             # feature preparation for prediction uses the shocked values from `shocked_row`
             # This part is tricky: PDModel.predict_for_loan takes dicts, not the pre-processed row.
             # We need to ensure the features it extracts from these dicts reflect the shock.
-            # For PoC, let's assume predict_for_loan can take a 'feature_overrides' dict.
-            # This requires modification of PDModel or a different approach here.
+            # Construct company dict with potentially shocked values for PD model
+            company_features_for_pd = company_obj.model_dump()
+            # Override with shocked values if they exist in shocked_row
+            for col, val in shocked_row.items():
+                if col in company_features_for_pd and pd.notna(val):
+                    company_features_for_pd[col] = val
 
-            # Simpler approach for PoC: Assume PDModel.predict() can take the shocked_row directly
-            # if shocked_row contains all necessary *raw* features for the PD model's preprocessor.
-            # The current PDModel.predict expects a DataFrame of features.
+            # Construct loan dict with potentially shocked values for PD model
+            loan_features_for_pd = loan_obj.model_dump()
+            for col, val in shocked_row.items():
+                if col in loan_features_for_pd and pd.notna(val):
+                    loan_features_for_pd[col] = val
 
-            # Let's use the PDModel.predict_for_loan by constructing the input carefully
-            # The `shocked_row` should contain the *raw features* that `predict_for_loan` internally processes.
-            # E.g., `shocked_row` should have 'company_revenue_usd_millions', not the scaled version.
-            pd_pred_class, pd_prob = -1, -1.0
-            pd_result = self.pd_model.predict_for_loan(stressed_loan_dict, stressed_company_dict) # This uses original values from dicts, not shocked ones!
-                                                                                                # This is a flaw in this PoC stub for StressTester.
-                                                                                                # A better way:
-                                                                                                # pd_model.predict(pd.DataFrame([shocked_row_relevant_features]))
+            pd_pred_class, pd_prob = -1, 0.5 # Default values
+            pd_result = self.pd_model.predict_for_loan(loan_features_for_pd, company_features_for_pd)
+            if pd_result:
+                pd_pred_class, pd_prob = pd_result
+            else:
+                logger.warning(f"Could not re-calculate PD for loan {loan_id} under stress. Using default 0.5.")
 
-            # Corrected conceptual path for PD:
-            # 1. The ScenarioGenerator's shocked_df should contain the *raw features* after shock.
-            # 2. PDModel should have a predict method that takes a DataFrame of these raw features.
-            # For now, we'll proceed with a placeholder value if direct prediction is complex with current structure.
-            # OR, if 'pd_estimate' was directly shocked in scenario data:
-            if 'pd_estimate' in shocked_row and pd.notna(shocked_row['pd_estimate']):
-                 pd_prob = shocked_row['pd_estimate'] # Use directly if scenario pre-calculates/shocks it
-                 pd_pred_class = 1 if pd_prob > 0.5 else 0 # Example threshold
-            else: # Fallback if PD not directly available in shocked_row
-                logger.warning(f"PD estimate not directly available in shocked data for {loan_id}. Using placeholder.")
-                pd_prob = 0.5 # Placeholder
-
-
-            # Predict LGD using shocked features (if LGD model depends on them)
-            # LGD model's `predict_lgd` takes a dict of features.
+            # Construct features for LGD model using shocked data
             lgd_features_for_stress = {
-                'collateral_type': loan_obj.collateral_type.value if loan_obj.collateral_type else 'None',
-                'loan_amount_usd': loan_obj.loan_amount # Assuming loan amount doesn't change in this scenario
-                # Add other features, potentially from shocked_row if scenario affects them
+                'collateral_type': str(shocked_row.get('collateral_type', loan_obj.collateral_type.value if loan_obj.collateral_type else 'None')),
+                'loan_amount_usd': float(shocked_row.get('loan_amount_usd', loan_obj.loan_amount)),
+                'seniority_of_debt': str(shocked_row.get('seniority_of_debt', loan_obj.seniority_of_debt if hasattr(loan_obj, 'seniority_of_debt') and loan_obj.seniority_of_debt else 'Unknown')),
+                'economic_condition_indicator': float(shocked_row.get('economic_condition_indicator', loan_obj.economic_condition_indicator if hasattr(loan_obj, 'economic_condition_indicator') and loan_obj.economic_condition_indicator is not None else 0.5))
             }
             lgd_val = self.lgd_model.predict_lgd(lgd_features_for_stress)
 
-            ead = loan_obj.loan_amount # Exposure At Default
+            ead = float(shocked_row.get('loan_amount_usd', loan_obj.loan_amount)) # EAD might be the shocked loan amount if applicable
             stressed_el = pd_prob * lgd_val * ead
+
+            # Determine original PD for comparison.
+            # This requires predict_for_loan with unshocked data or access to an original_pd_estimate column.
+            # If 'original_pd_estimate' is reliably passed through by ScenarioGenerator, use that.
+            # Otherwise, it might be better to recalculate or set to N/A.
+            original_pd_to_log = shocked_row.get('original_pd_estimate', "N/A")
+            if original_pd_to_log == "N/A" and 'pd_estimate' in base_portfolio_df.columns: # if base_portfolio_df was accessible and had it
+                 original_pd_to_log = base_portfolio_df.loc[index, 'pd_estimate'] # This is conceptual as base_portfolio_df isn't directly here.
+
 
             stressed_item = {
                 "loan_id": loan_id,
                 "company_id": company_id,
                 "company_name": company_obj.company_name,
-                "original_pd_estimate": shocked_row.get('original_pd_estimate', "N/A"), # If available from scenario
+                # "original_pd_estimate": original_pd_to_log, # Keep if available and meaningful
+                "original_features": {f"original_{k}": v for k, v in shocked_row.items() if k.startswith('original_')},
+                "shocked_features": {k: v for k, v in shocked_row.items() if not k.startswith('original_') and k not in ['loan_id', 'company_id']},
                 "stressed_pd_estimate": round(pd_prob, 4),
                 "stressed_lgd_estimate": round(lgd_val, 4),
-                "stressed_expected_loss_usd": round(stressed_el, 2),
+                "stressed_expected_loss_usd": round(stressed_el, 2) if pd.notna(stressed_el) else "N/A",
                 "exposure_at_default_usd": ead
             }
             stressed_portfolio_overview.append(stressed_item)
@@ -220,23 +222,34 @@ if __name__ == "__main__":
                  base_data_for_scenario.append({
                      'loan_id': loan_item.loan_id,
                      'company_id': comp_item.company_id,
-                     # Add raw features PD/LGD models might use and ScenarioGenerator might shock
+                     # Raw features for PDModel's _prepare_features -> predict_for_loan
                      'company_revenue_usd_millions': comp_item.revenue_usd_millions if comp_item.revenue_usd_millions is not None else 0,
                      'interest_rate_percentage': loan_item.interest_rate_percentage,
                      'collateral_type': loan_item.collateral_type.value if loan_item.collateral_type else "None",
                      'loan_amount_usd': loan_item.loan_amount,
-                     'industry_sector': comp_item.industry_sector.value,
-                     'company_age_years': (pd.Timestamp('today').date() - comp_item.founded_date).days / 365.25 if comp_item.founded_date else -1,
-                     'pd_estimate': 0.1 # Placeholder initial PD for scenario generator to shock
+                     'industry_sector': comp_item.industry_sector.value if comp_item.industry_sector else "Other",
+                     'founded_date': str(comp_item.founded_date) if comp_item.founded_date else None, # For company_age_at_origination
+                     'origination_date': str(loan_item.origination_date), # For company_age_at_origination & loan_duration
+                     'maturity_date': str(loan_item.maturity_date), # For loan_duration
+                     # Raw features for LGDModel's predict_lgd
+                     'seniority_of_debt': str(loan_item.seniority_of_debt) if hasattr(loan_item, 'seniority_of_debt') and loan_item.seniority_of_debt else 'Unknown',
+                     'economic_condition_indicator': loan_item.economic_condition_indicator if hasattr(loan_item, 'economic_condition_indicator') and loan_item.economic_condition_indicator is not None else 0.5,
+                     # Original PD (optional, if you want to compare against a non-stressed version for logging)
+                     # 'original_pd_estimate': # Could be from a non-stressed model run or a static value
                  })
         base_df_for_scenario = pd.DataFrame(base_data_for_scenario)
 
         if not base_df_for_scenario.empty:
-            # Generate a scenario
+            # Generate a scenario using feature_shocks
+            feature_shocks_config = {
+                'company_revenue_usd_millions': {'type': 'multiplicative', 'value': 0.6}, # 40% decrease
+                'interest_rate_percentage': {'type': 'additive', 'value': 0.03},       # 3% (300bps) absolute increase
+                'economic_condition_indicator': {'type': 'override', 'value': 0.15}    # Severe downturn
+            }
             test_scenario = scenario_gen.generate_economic_shock_scenario(
                 base_df_for_scenario,
-                pd_shock_factor=2.5, # PDs increase by 150%
-                revenue_shock_factor=0.6 # Revenues decrease by 40%
+                feature_shocks=feature_shocks_config,
+                scenario_name="Severe Market Contraction"
             )
             logger.info(f"Generated test scenario: {test_scenario.get('name')}")
             logger.info(f"Scenario description: {test_scenario.get('description')}")
