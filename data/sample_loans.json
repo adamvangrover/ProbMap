@@ -1,0 +1,46 @@
+[
+  {
+    "loan_id": "LOAN7001",
+    "company_id": "COMP001",
+    "loan_amount_usd": 5000000,
+    "currency": "USD",
+    "origination_date": "2022-08-15",
+    "maturity_date": "2027-08-15",
+    "interest_rate_percentage": 5.5,
+    "collateral_type": "Real Estate",
+    "default_status": false
+  },
+  {
+    "loan_id": "LOAN7002",
+    "company_id": "COMP002",
+    "loan_amount_usd": 2500000,
+    "currency": "USD",
+    "origination_date": "2023-01-20",
+    "maturity_date": "2026-01-20",
+    "interest_rate_percentage": 6.2,
+    "collateral_type": "Equipment",
+    "default_status": false
+  },
+  {
+    "loan_id": "LOAN7003",
+    "company_id": "COMP001",
+    "loan_amount_usd": 1000000,
+    "currency": "USD",
+    "origination_date": "2023-03-10",
+    "maturity_date": "2025-03-10",
+    "interest_rate_percentage": 4.8,
+    "collateral_type": "Receivables",
+    "default_status": false
+  },
+  {
+    "loan_id": "LOAN7004",
+    "company_id": "COMP004",
+    "loan_amount_usd": 7500000,
+    "currency": "USD",
+    "origination_date": "2021-11-05",
+    "maturity_date": "2028-11-05",
+    "interest_rate_percentage": 5.0,
+    "collateral_type": "Inventory",
+    "default_status": true
+  }
+]

@@ -1,0 +1,6 @@
+company_id,company_name,industry_sector,country_iso_code,founded_date,revenue_usd_millions
+COMP001,Innovatech Solutions,Technology,USA,2010-05-15,150.75
+COMP002,GreenBuild Corp,Construction,CAN,2005-01-20,88.20
+COMP003,HealthFirst Pharma,Pharmaceuticals,GBR,1998-11-01,320.50
+COMP004,Global Logistics Inc,Logistics,DEU,2012-07-30,210.00
+COMP005,AgriGrow Ltd,Agriculture,USA,2000-03-10,65.40
