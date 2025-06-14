@@ -1,0 +1,6 @@
+loan_amount_usd,interest_rate_percentage,loan_duration_days,company_age_at_origination,debt_to_equity_ratio,current_ratio,net_profit_margin,roe,loan_amount_x_interest_rate,industry_sector,collateral_type
+500000,5.5,1825,5.2,0.5,1.5,0.12,0.15,27500,Technology,Real Estate
+1000000,4.0,1095,2.1,1.2,1.0,0.05,0.08,40000,Manufacturing,Equipment
+250000,7.0,730,10.7,0.2,2.5,0.20,0.22,17500,Technology,None
+7500000,3.5,2555,1.5,2.5,0.8,-0.05,-0.10,262500,Construction,Real Estate
+1500000,6.0,1460,8.0,0.8,1.2,0.09,0.11,90000,Manufacturing,Receivables
