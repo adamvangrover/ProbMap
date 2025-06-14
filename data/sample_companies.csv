@@ -1,9 +1,21 @@
-company_id,company_name,industry_sector,country_iso_code,founded_date,revenue_usd_millions,subsidiaries,suppliers,customers,loan_agreement_ids,financial_statement_ids,management_quality_score
-COMP001,Innovatech Solutions,Technology,USA,2010-05-15,150.75,COMP901;COMP902,,CUST001;CUST002,LOAN7001;LOAN7002,FS001;FS002,8
-COMP002,GreenBuild Corp,Construction,CAN,2005-01-20,88.20,,SUPP801,CUST003,LOAN7003,FS003;FS004,7
-COMP003,HealthFirst Pharma,Pharmaceuticals,GBR,1998-11-01,320.50,COMP903,,CUST004;CUST005,LOAN7004,FS005,9
-COMP004,Global Logistics Inc,Logistics,DEU,2012-07-30,210.00,,,LOAN7005,FS006,6
-COMP005,AgriGrow Ltd,Agriculture,USA,2000-03-10,65.40,,SUPP802;SUPP803,,FS007,7
-COMP006,FinServ Pro,Financial Services,USA,2018-02-20,45.50,,,,FS008,8
-COMP007,ManuCore Ltd,Manufacturing,JPN,2002-06-10,120.00,COMP904,SUPP804,,LOAN7006,FS009;FS010,7
-COMP008,RetailR Us,Other,FRA,2015-09-01,75.25,,,LOAN7007,FS011,6
+company_id,company_name,industry,country,year_founded,status,management_quality_score,loan_agreement_ids,industry_sector,country_iso_code,founded_date,revenue_usd_millions,subsidiaries,suppliers,customers,financial_statement_ids
+COMP001,Innovatech Solutions,,,,,8,LOAN7001;LOAN7002;LOAN7019,Technology,USA,2010-05-15,150.75,COMP901;COMP902,,CUST001;CUST002,FS001;FS002
+COMP002,GreenBuild Corp,,,,,7,LOAN7003;LOAN7008,Construction,CAN,2005-01-20,88.20,,SUPP801,CUST003,FS003;FS004
+COMP003,HealthFirst Pharma,,,,,9,LOAN7004;LOAN7031,Pharmaceuticals,GBR,1998-11-01,320.50,COMP903,,CUST004;CUST005,FS005
+COMP004,Global Logistics Inc,,,,,,FS006;LOAN7021;LOAN7030,Logistics,DEU,2012-07-30,210.00,,,LOAN7005,6
+COMP005,AgriGrow Ltd,,,,,,FS007;LOAN7017;LOAN7020,Agriculture,USA,2000-03-10,65.40,,SUPP802;SUPP803,,7
+COMP006,FinServ Pro,,,,,,FS008,Financial Services,USA,2018-02-20,45.50,,,,8
+COMP007,ManuCore Ltd,,,,,7,LOAN7006;LOAN7009,Manufacturing,JPN,2002-06-10,120.00,COMP904,SUPP804,,FS009;FS010
+COMP008,RetailR Us,,,,,,FS011;LOAN7022,Other,FRA,2015-09-01,75.25,,,LOAN7007,6
+COMP009,New Company A9,Technology,USA,1997,Operating,2.0,LOAN7014,,,,,,,,
+COMP010,New Company B10,Healthcare,USA,2014,Operating,1.3,LOAN7015,,,,,,,,
+COMP011,New Company C11,Manufacturing,USA,1981,Operating,1.4,LOAN7027,,,,,,,,
+COMP012,New Company D12,Healthcare,France,1981,Operating,3.2,LOAN7012,,,,,,,,
+COMP013,New Company E13,Retail,Germany,1994,Operating,2.8,LOAN7018;LOAN7026,,,,,,,,
+COMP014,New Company F14,Finance,USA,1990,Operating,3.8,LOAN7023;LOAN7032,,,,,,,,
+COMP015,New Company G15,Finance,UK,1989,Operating,1.9,LOAN7029,,,,,,,,
+COMP016,New Company H16,Finance,USA,1985,Operating,2.5,LOAN7011;LOAN7016,,,,,,,,
+COMP017,New Company I17,Finance,UK,1996,Operating,4.2,,,,,,,,,
+COMP018,New Company J18,Manufacturing,France,1987,Operating,4.9,LOAN7010;LOAN7024,,,,,,,,
+COMP019,New Company K19,Manufacturing,USA,2015,Operating,2.2,LOAN7025;LOAN7028,,,,,,,,
+COMP020,New Company L20,Retail,UK,1992,Operating,3.8,LOAN7013,,,,,,,,
