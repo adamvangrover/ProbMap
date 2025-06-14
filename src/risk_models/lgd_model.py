@@ -20,7 +20,8 @@ import datetime # For model versioning
 from src.core.config import settings
 from src.data_management.knowledge_base import KnowledgeBaseService
 # Already imported ModelRegistry in the previous diff for PDModel, but good to ensure it's here for LGDModel context
-from src.mlops.model_registry import ModelRegistry # For model registration
+from src.mlops.model_registry import ModelRegistry 
+
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class LGDModel:
                 elif collateral_value_str == "Equipment": base_recovery = 0.5
                 elif collateral_value_str == "Receivables": base_recovery = 0.4
                 elif collateral_value_str == "Inventory": base_recovery = 0.3
-
+            
             recovery_rate_adjusted = base_recovery
 
             # Adjustment for Seniority
@@ -82,7 +83,7 @@ class LGDModel:
                 recovery_rate_adjusted += 0.10
             elif seniority == 'Subordinated':
                 recovery_rate_adjusted -= 0.15
-
+            
             # Adjustment for Economic Condition
             economic_indicator = loan.economic_condition_indicator if loan.economic_condition_indicator is not None else 0.5
             recovery_rate_adjustment_econ = (economic_indicator - 0.5) * 0.2 # Max +/- 0.1
@@ -161,13 +162,8 @@ class LGDModel:
             try:
                 registry = ModelRegistry()
                 model_params = self.model.named_steps['regressor'].get_params()
-
-        if "error" not in metrics:
-            try:
-                registry = ModelRegistry()
-                model_params = self.model.named_steps['regressor'].get_params() if self.model else {}
                 model_version = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-
+                
                 registry.register_model(
                     model_name="LGDModel",
                     model_version=model_version,
@@ -181,7 +177,6 @@ class LGDModel:
                 logger.error(f"Error during model registration for LGDModel: {e}")
         elif not self.model and "error" not in metrics:
             logger.warning("LGDModel training seemed successful but model object is None. Skipping registration.")
-
 
 
         return metrics
@@ -199,10 +194,10 @@ class LGDModel:
 
         # Create DataFrame from input dict
         # Ensure all features expected by the model are present
-
+        
         # Provide defaults for new features if missing
         if 'seniority_of_debt' not in loan_features:
-            loan_features['seniority_of_debt'] = 'Unknown'
+            loan_features['seniority_of_debt'] = 'Unknown' 
         if 'economic_condition_indicator' not in loan_features:
             loan_features['economic_condition_indicator'] = 0.5 # Default to neutral
 
@@ -239,7 +234,6 @@ class LGDModel:
     def load_model(self) -> bool:
         model_loaded_successfully = False
         # Try loading from the specific model_path first (if it exists)
-
         if self.model_path.exists():
             try:
                 self.model = joblib.load(self.model_path)
@@ -248,7 +242,6 @@ class LGDModel:
             except Exception as e:
                 logger.error(f"Error loading LGD model from {self.model_path}: {e}. Trying registry.")
                 self.model = None # Ensure model is None if loading fails
-
 
         if not model_loaded_successfully:
             logger.info(f"Model file not found at {self.model_path} or failed to load. Attempting to load 'production' model from registry.")
@@ -260,7 +253,6 @@ class LGDModel:
                     if prod_model_path.exists():
                         self.model = joblib.load(prod_model_path)
                         self.model_path = prod_model_path # Update model_path to the one loaded
-
                         logger.info(f"LGD Model (production) loaded from registry path: {self.model_path}")
                         model_loaded_successfully = True
                     else:
@@ -270,10 +262,9 @@ class LGDModel:
             except Exception as e:
                 logger.error(f"Error loading production LGDModel from registry: {e}")
                 self.model = None # Ensure model is None if registry loading fails
-
+        
         if not model_loaded_successfully:
              logger.warning(f"LGD Model could not be loaded from specified path or registry.")
-
 
         return model_loaded_successfully
 
@@ -349,15 +340,15 @@ if __name__ == "__main__":
             predicted_lgd_2 = lgd_model_instance.predict_lgd(sample_features_for_lgd_2)
             logger.info(f"Predicted LGD (Inventory, Subordinated, Bad Econ): {predicted_lgd_2:.4f}")
 
-            sample_features_for_lgd_3 = {
-                'collateral_type': 'None',
+            sample_features_for_lgd_3 = { 
+                'collateral_type': 'None', 
                 'loan_amount_usd': 200000,
                 'seniority_of_debt': 'Unknown', # Test default for seniority
                 'economic_condition_indicator': 0.5 # Test default for econ indicator
             }
             predicted_lgd_3 = lgd_model_instance.predict_lgd(sample_features_for_lgd_3)
             logger.info(f"Predicted LGD (None Collateral, Unknown Seniority, Neutral Econ): {predicted_lgd_3:.4f}")
-
+            
             sample_features_for_lgd_4 = { # Missing new features to test defaults in predict_lgd
                 'collateral_type': 'Equipment',
                 'loan_amount_usd': 750000

@@ -91,8 +91,24 @@ def generate_orchestration_manifest():
 
     # Initially, only the manifest itself is an output file. This can be expanded.
     output_files_list = [
-        {"name": "Orchestration Manifest", "path": str(manifest_path.relative_to(PROJECT_ROOT)).replace('\\', '/')},
-        {"name": "JSON-LD Risk Profiles", "path": "output/risk_profiles.jsonld", "description": "Sample company risk profiles in JSON-LD format."}
+        {"name": "Orchestration Manifest", "path": str(manifest_path.relative_to(PROJECT_ROOT)).replace('\\', '/'), "description": "This manifest file, providing a snapshot of system components and outputs."},
+        {"name": "JSON-LD Risk Profiles", "path": "output/risk_profiles.jsonld", "description": "Sample company risk profiles in JSON-LD format, generated from the risk map overview."},
+        {
+            "name": "System Overview HTML Page",
+            "path": "index.html", # Relative to project root
+            "description": "Main HTML overview page with links and embedded notebook snapshots."
+        },
+        {
+            "name": "Conceptual Portfolio Risk/Return Plot",
+            "path": "output/plot_portfolio_risk_return.png",
+            "description": "Static plot from analysis notebook showing conceptual portfolio risk vs. return."
+        },
+        {
+            "name": "Conceptual Peer Comparison Plot",
+            "path": "output/plot_peer_comparison.png",
+            "description": "Static plot from analysis notebook showing conceptual company vs. peer metrics."
+        }
+
     ]
 
     manifest = {
