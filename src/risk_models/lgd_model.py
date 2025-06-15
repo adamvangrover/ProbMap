@@ -23,6 +23,7 @@ from src.data_management.knowledge_base import KnowledgeBaseService
 from src.mlops.model_registry import ModelRegistry
 
 
+
 logger = logging.getLogger(__name__)
 
 class LGDModel:
@@ -198,6 +199,7 @@ class LGDModel:
         # Provide defaults for new features if missing
         if 'seniority_of_debt' not in loan_features:
             loan_features['seniority_of_debt'] = 'Unknown'
+
         if 'economic_condition_indicator' not in loan_features:
             loan_features['economic_condition_indicator'] = 0.5 # Default to neutral
 
@@ -342,6 +344,7 @@ if __name__ == "__main__":
 
             sample_features_for_lgd_3 = {
                 'collateral_type': 'None',
+
                 'loan_amount_usd': 200000,
                 'seniority_of_debt': 'Unknown', # Test default for seniority
                 'economic_condition_indicator': 0.5 # Test default for econ indicator

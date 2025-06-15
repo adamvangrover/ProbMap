@@ -22,3 +22,71 @@
     "reason": "Missed principal and interest payment due to severe liquidity issues."
   }
 ]
+    {
+        "event_id": "DE001",
+        "loan_id": "LOAN7004",
+        "company_id": "COMP003",
+        "default_date": "2023-05-15",
+        "default_type": "CovenantBreach",
+        "exposure_at_default_usd": 7200000,
+        "recovery_amount_usd": 4000000,
+        "loss_given_default_actual": 0.4444444444444444,
+        "reason": "Breach of debt service coverage ratio covenant due to declining sales."
+    },
+    {
+        "event_id": "DE002",
+        "loan_id": "LOAN7007",
+        "company_id": "COMP008",
+        "default_date": "2024-02-28",
+        "default_type": "PaymentMissed",
+        "exposure_at_default_usd": 480000,
+        "recovery_amount_usd": 150000,
+        "loss_given_default_actual": 0.6875,
+        "reason": "Missed principal and interest payment due to severe liquidity issues."
+    },
+    {
+        "event_id": "DE003",
+        "loan_id": "LOAN7014",
+        "company_id": "COMP009",
+        "default_date": "2026-12-01",
+        "reason_for_default": "Missed Payment",
+        "amount_at_default": 1564821,
+        "recovery_percentage": 0.18
+    },
+    {
+        "event_id": "DE004",
+        "loan_id": "LOAN7017",
+        "company_id": "COMP005",
+        "default_date": "2024-07-03",
+        "reason_for_default": "Missed Payment",
+        "amount_at_default": 290737,
+        "recovery_percentage": 0.52
+    },
+    {
+        "event_id": "DE005",
+        "loan_id": "LOAN7015",
+        "company_id": "COMP010",
+        "default_date": "2025-03-30",
+        "reason_for_default": "Bankruptcy Filing",
+        "amount_at_default": 1767356,
+        "recovery_percentage": 0.39
+    },
+    {
+        "event_id": "DE006",
+        "loan_id": "LOAN7019",
+        "company_id": "COMP001",
+        "default_date": "2027-05-04",
+        "reason_for_default": "Missed Payment",
+        "amount_at_default": 181940,
+        "recovery_percentage": 0.38
+    },
+    {
+        "event_id": "DE007",
+        "loan_id": "LOAN7013",
+        "company_id": "COMP020",
+        "default_date": "2029-05-28",
+        "reason_for_default": "Covenant Breach",
+        "amount_at_default": 153337,
+        "recovery_percentage": 0.13
+    }
+]

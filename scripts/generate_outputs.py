@@ -118,6 +118,7 @@ def generate_orchestration_manifest():
             "path": "notebooks/03_excel_data_exporter.ipynb",
             "description": "Jupyter notebook to generate and preview the consolidated Excel data export."
         }
+
     ]
 
     manifest = {

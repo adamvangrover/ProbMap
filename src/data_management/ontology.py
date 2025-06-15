@@ -60,6 +60,7 @@ class CorporateEntity(BaseModel):
     customers: Optional[List[str]] = Field(None, description="List of company_ids of key customers")
     loan_agreement_ids: Optional[List[str]] = Field(None, description="List of loan_ids associated with this company")
     financial_statement_ids: Optional[List[str]] = Field(None, description="List of statement_ids associated with this company")
+    management_quality_score: Optional[int] = Field(None, ge=1, le=10, description="Subjective score of management quality (1-10)")
     # Add other relevant fields like address, number of employees, etc.
 
 class LoanAgreement(BaseModel):
@@ -76,6 +77,8 @@ class LoanAgreement(BaseModel):
     guarantors: Optional[List[str]] = Field(None, description="List of company_ids acting as guarantors")
     syndicate_members: Optional[List[str]] = Field(None, description="List of counterparty_ids (banks) in a syndicated loan")
     security_details: Optional[str] = None
+    seniority_of_debt: Optional[str] = Field(None, description="Seniority level of the debt (e.g., Senior, Subordinated, Secured, Unsecured)")
+    economic_condition_indicator: Optional[float] = Field(None, ge=0, le=1, description="Synthetic indicator of economic conditions at loan origination or at a point in time (0-1, higher is better)")
 
     @validator('maturity_date')
     def maturity_must_be_after_origination(cls, v, values):
