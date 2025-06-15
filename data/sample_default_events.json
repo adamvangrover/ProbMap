@@ -1,0 +1,24 @@
+[
+  {
+    "event_id": "DE001",
+    "loan_id": "LOAN7004",
+    "company_id": "COMP003",
+    "default_date": "2023-05-15",
+    "default_type": "CovenantBreach",
+    "exposure_at_default_usd": 7200000,
+    "recovery_amount_usd": 4000000,
+    "loss_given_default_actual": 0.4444444444444444,
+    "reason": "Breach of debt service coverage ratio covenant due to declining sales."
+  },
+  {
+    "event_id": "DE002",
+    "loan_id": "LOAN7007",
+    "company_id": "COMP008",
+    "default_date": "2024-02-28",
+    "default_type": "PaymentMissed",
+    "exposure_at_default_usd": 480000,
+    "recovery_amount_usd": 150000,
+    "loss_given_default_actual": 0.6875,
+    "reason": "Missed principal and interest payment due to severe liquidity issues."
+  }
+]

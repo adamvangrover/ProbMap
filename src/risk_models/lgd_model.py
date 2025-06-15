@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 # For a more advanced LGD model, Beta Regression is common, but statsmodels is a heavy dependency.
 # from statsmodels.discrete.discrete_model import BetaModel
 # For PoC, we'll use a simpler approach: mean LGD per collateral type or a simple linear regression.
-from sklearn.linear_model import LinearRegression # Example for a simple regression
+from sklearn.ensemble import GradientBoostingRegressor # Changed from LinearRegression
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -15,9 +15,13 @@ from sklearn.impute import SimpleImputer
 
 from typing import Optional, Dict, Any, List
 from pathlib import Path
+import datetime # For model versioning
 
 from src.core.config import settings
 from src.data_management.knowledge_base import KnowledgeBaseService
+# Already imported ModelRegistry in the previous diff for PDModel, but good to ensure it's here for LGDModel context
+from src.mlops.model_registry import ModelRegistry
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +40,8 @@ class LGDModel:
 
         # For PoC, let's try a simple Linear Regression on some synthetic recovery rates
         # Features: collateral_type (OHE), loan_amount_usd (as example numeric)
-        self.numerical_features = ['loan_amount_usd'] # Example numeric feature
-        self.categorical_features = ['collateral_type'] # Key feature for LGD
+        self.numerical_features = ['loan_amount_usd', 'economic_condition_indicator'] # Added economic_condition_indicator
+        self.categorical_features = ['collateral_type', 'seniority_of_debt'] # Added seniority_of_debt
 
         preprocessor = ColumnTransformer(
             transformers=[
@@ -48,7 +52,7 @@ class LGDModel:
             remainder='drop'
         )
         self.base_model = Pipeline(steps=[('preprocessor', preprocessor),
-                                          ('regressor', LinearRegression())])
+                                          ('regressor', GradientBoostingRegressor(random_state=42, n_estimators=100))])
 
 
     def _prepare_features_and_target(self, kb_service: KnowledgeBaseService) -> pd.DataFrame:
@@ -62,23 +66,43 @@ class LGDModel:
         records = []
         for loan in all_loans:
             # Synthetic recovery rate based on collateral for PoC
-            # These are made-up values for demonstration
-            recovery_rate = 0.1 # Default low recovery
+            # Synthetic recovery rate based on collateral for PoC
+            base_recovery = 0.1 # Default low recovery
             if loan.collateral_type:
-                if loan.collateral_type.value == "Real Estate": recovery_rate = 0.7
-                elif loan.collateral_type.value == "Equipment": recovery_rate = 0.5
-                elif loan.collateral_type.value == "Receivables": recovery_rate = 0.4
-                elif loan.collateral_type.value == "Inventory": recovery_rate = 0.3
+                collateral_value_str = str(loan.collateral_type.value) # Ensure it's a string for comparison
+                if collateral_value_str == "Real Estate": base_recovery = 0.7
+                elif collateral_value_str == "Equipment": base_recovery = 0.5
+                elif collateral_value_str == "Receivables": base_recovery = 0.4
+                elif collateral_value_str == "Inventory": base_recovery = 0.3
 
-            # Add some noise to make it seem more realistic for regression
-            recovery_rate = np.clip(recovery_rate + np.random.normal(0, 0.1), 0.05, 0.95)
+            recovery_rate_adjusted = base_recovery
+
+            # Adjustment for Seniority
+            seniority = str(loan.seniority_of_debt) if loan.seniority_of_debt else 'Unknown'
+            if seniority == 'Senior':
+                recovery_rate_adjusted += 0.10
+            elif seniority == 'Subordinated':
+                recovery_rate_adjusted -= 0.15
+
+            # Adjustment for Economic Condition
+            economic_indicator = loan.economic_condition_indicator if loan.economic_condition_indicator is not None else 0.5
+            recovery_rate_adjustment_econ = (economic_indicator - 0.5) * 0.2 # Max +/- 0.1
+            recovery_rate_adjusted += recovery_rate_adjustment_econ
+
+            # Add some noise
+            recovery_rate_final = recovery_rate_adjusted + np.random.normal(0, 0.05) # Reduced noise std dev
+
+            # Clip the final recovery_rate
+            recovery_rate_final = np.clip(recovery_rate_final, 0.05, 0.95)
 
             if loan.default_status: # Only consider defaulted loans for LGD typically
                 record = {
                     'loan_id': loan.loan_id,
                     'loan_amount_usd': loan.loan_amount,
                     'collateral_type': loan.collateral_type.value if loan.collateral_type else 'None',
-                    'recovery_rate': recovery_rate # Target variable
+                    'seniority_of_debt': seniority,
+                    'economic_condition_indicator': economic_indicator,
+                    'recovery_rate': recovery_rate_final # Target variable
                 }
                 records.append(record)
 
@@ -132,6 +156,29 @@ class LGDModel:
         }
         logger.info(f"LGD Training complete. Metrics: {metrics}")
         self.save_model()
+
+        # Automate model registration
+        if "error" not in metrics and self.model: # Ensure model exists before getting params
+            try:
+                registry = ModelRegistry()
+                model_params = self.model.named_steps['regressor'].get_params()
+                model_version = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+
+                registry.register_model(
+                    model_name="LGDModel",
+                    model_version=model_version,
+                    model_path=str(self.model_path),
+                    metrics=metrics,
+                    parameters=model_params,
+                    tags={"stage": "training", "model_type": "GradientBoostingRegressor"}
+                )
+                logger.info(f"LGDModel version {model_version} registered successfully.")
+            except Exception as e:
+                logger.error(f"Error during model registration for LGDModel: {e}")
+        elif not self.model and "error" not in metrics:
+            logger.warning("LGDModel training seemed successful but model object is None. Skipping registration.")
+
+
         return metrics
 
     def predict_lgd(self, loan_features: Dict[str, Any]) -> float:
@@ -147,10 +194,20 @@ class LGDModel:
 
         # Create DataFrame from input dict
         # Ensure all features expected by the model are present
-        for col in self.numerical_features + self.categorical_features:
+
+        # Provide defaults for new features if missing
+        if 'seniority_of_debt' not in loan_features:
+            loan_features['seniority_of_debt'] = 'Unknown'
+        if 'economic_condition_indicator' not in loan_features:
+            loan_features['economic_condition_indicator'] = 0.5 # Default to neutral
+
+        # Defaulting for other features if missing
+        for col in self.numerical_features:
             if col not in loan_features:
-                 # Defaulting strategy - might need more sophisticated handling
-                loan_features[col] = 0 if col in self.numerical_features else 'None'
+                loan_features[col] = 0 # Or np.nan and let imputer handle it
+        for col in self.categorical_features:
+            if col not in loan_features:
+                loan_features[col] = 'None' # Or 'Unknown'
 
         data_df = pd.DataFrame([loan_features])
 
@@ -175,18 +232,41 @@ class LGDModel:
             logger.warning("No LGD model to save.")
 
     def load_model(self) -> bool:
-        try:
-            if self.model_path.exists():
+        model_loaded_successfully = False
+        # Try loading from the specific model_path first (if it exists)
+        if self.model_path.exists():
+            try:
                 self.model = joblib.load(self.model_path)
-                logger.info(f"LGD Model loaded from {self.model_path}")
-                return True
-            else:
-                logger.warning(f"LGD Model file not found at {self.model_path}. Model not loaded.")
-                return False
-        except Exception as e:
-            logger.error(f"Error loading LGD model: {e}")
-            self.model = None
-            return False
+                logger.info(f"LGD Model loaded from specified path: {self.model_path}")
+                model_loaded_successfully = True
+            except Exception as e:
+                logger.error(f"Error loading LGD model from {self.model_path}: {e}. Trying registry.")
+                self.model = None # Ensure model is None if loading fails
+
+        if not model_loaded_successfully:
+            logger.info(f"Model file not found at {self.model_path} or failed to load. Attempting to load 'production' model from registry.")
+            try:
+                registry = ModelRegistry()
+                prod_model_path_str = registry.get_production_model_path("LGDModel")
+                if prod_model_path_str:
+                    prod_model_path = Path(prod_model_path_str)
+                    if prod_model_path.exists():
+                        self.model = joblib.load(prod_model_path)
+                        self.model_path = prod_model_path # Update model_path to the one loaded
+                        logger.info(f"LGD Model (production) loaded from registry path: {self.model_path}")
+                        model_loaded_successfully = True
+                    else:
+                        logger.warning(f"Production LGD model path from registry does not exist: {prod_model_path}")
+                else:
+                    logger.warning("No production LGDModel found in registry.")
+            except Exception as e:
+                logger.error(f"Error loading production LGDModel from registry: {e}")
+                self.model = None # Ensure model is None if registry loading fails
+
+        if not model_loaded_successfully:
+             logger.warning(f"LGD Model could not be loaded from specified path or registry.")
+
+        return model_loaded_successfully
 
 if __name__ == "__main__":
     if not logging.getLogger().hasHandlers():
@@ -209,32 +289,71 @@ if __name__ == "__main__":
         train_metrics_lgd = lgd_model_instance.train(kb_service=kb)
         logger.info(f"LGD Model training metrics: {train_metrics_lgd}")
 
-        # Load LGD model
-        logger.info("Loading LGD model...")
-        load_success_lgd = lgd_model_instance.load_model()
-        logger.info(f"LGD Model loaded successfully: {load_success_lgd}")
+        # After training, list models from registry
+        if "error" not in train_metrics_lgd:
+            registry = ModelRegistry()
+            logger.info("LGD Models in registry after training:")
+            lgd_models_in_registry = registry.list_models("LGDModel")
+            for m in lgd_models_in_registry:
+                logger.info(f"  - Version: {m['model_version']}, Path: {m['model_path']}, Status: {m.get('status')}, Metrics: {m.get('metrics')}")
 
-        if load_success_lgd and lgd_model_instance.model is not None:
+            # Promote the just trained model to "production" for testing fallback loading
+            if lgd_models_in_registry:
+                latest_version = lgd_models_in_registry[0]['model_version'] # Assumes latest is first
+                logger.info(f"Promoting LGDModel version {latest_version} to 'production' for testing.")
+                registry.update_model_status("LGDModel", latest_version, "production")
+
+        # Test fallback loading
+        logger.info("--- Testing Fallback Model Loading for LGDModel ---")
+        lgd_model_for_fallback_test = LGDModel(model_path=Path("models_store/non_existent_lgd_model.joblib"))
+        load_success_fallback_lgd = lgd_model_for_fallback_test.load_model()
+        logger.info(f"LGDModel fallback loading attempt. Success: {load_success_fallback_lgd}")
+        if load_success_fallback_lgd and lgd_model_for_fallback_test.model is not None:
+            logger.info(f"Fallback LGDModel loaded from: {lgd_model_for_fallback_test.model_path}")
+        else:
+            logger.warning("Fallback LGDModel loading failed or no production model was found.")
+
+        logger.info("--- Resuming tests with originally trained/loaded LGDModel instance ---")
+        if lgd_model_instance.model is None:
+            logger.info("Re-loading original LGD model instance for subsequent tests...")
+            load_success_lgd = lgd_model_instance.load_model()
+            logger.info(f"Model loaded successfully for original LGD instance: {load_success_lgd}")
+
+
+        if lgd_model_instance.model is not None:
             # Test prediction with some sample features
-            sample_features_for_lgd = {
-                'collateral_type': 'Real Estate', # Value from CollateralType enum
-                'loan_amount_usd': 5000000
+            sample_features_for_lgd_1 = {
+                'collateral_type': 'Real Estate',
+                'loan_amount_usd': 5000000,
+                'seniority_of_debt': 'Senior',
+                'economic_condition_indicator': 0.75 # Good conditions
             }
-            predicted_lgd = lgd_model_instance.predict_lgd(sample_features_for_lgd)
-            logger.info(f"Predicted LGD for Real Estate collateral, 5M loan: {predicted_lgd:.4f}")
+            predicted_lgd_1 = lgd_model_instance.predict_lgd(sample_features_for_lgd_1)
+            logger.info(f"Predicted LGD (Real Estate, Senior, Good Econ): {predicted_lgd_1:.4f}")
 
             sample_features_for_lgd_2 = {
                 'collateral_type': 'Inventory',
-                'loan_amount_usd': 100000
+                'loan_amount_usd': 100000,
+                'seniority_of_debt': 'Subordinated',
+                'economic_condition_indicator': 0.25 # Bad conditions
             }
             predicted_lgd_2 = lgd_model_instance.predict_lgd(sample_features_for_lgd_2)
-            logger.info(f"Predicted LGD for Inventory collateral, 100k loan: {predicted_lgd_2:.4f}")
+            logger.info(f"Predicted LGD (Inventory, Subordinated, Bad Econ): {predicted_lgd_2:.4f}")
 
-            sample_features_for_lgd_3 = { # Example with a type that might be unknown if not in training's OHE
-                'collateral_type': 'Spaceship', # Unknown type
-                'loan_amount_usd': 100000000
+            sample_features_for_lgd_3 = {
+                'collateral_type': 'None',
+                'loan_amount_usd': 200000,
+                'seniority_of_debt': 'Unknown', # Test default for seniority
+                'economic_condition_indicator': 0.5 # Test default for econ indicator
             }
             predicted_lgd_3 = lgd_model_instance.predict_lgd(sample_features_for_lgd_3)
-            logger.info(f"Predicted LGD for 'Spaceship' collateral: {predicted_lgd_3:.4f}")
+            logger.info(f"Predicted LGD (None Collateral, Unknown Seniority, Neutral Econ): {predicted_lgd_3:.4f}")
+
+            sample_features_for_lgd_4 = { # Missing new features to test defaults in predict_lgd
+                'collateral_type': 'Equipment',
+                'loan_amount_usd': 750000
+            }
+            predicted_lgd_4 = lgd_model_instance.predict_lgd(sample_features_for_lgd_4)
+            logger.info(f"Predicted LGD (Equipment, Missing Seniority/Econ): {predicted_lgd_4:.4f}")
         else:
             logger.error("LGD Model could not be loaded or trained. Prediction tests skipped.")

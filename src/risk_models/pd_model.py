@@ -1,8 +1,10 @@
 import logging
 import joblib
 import pandas as pd
+import numpy as np # Added for SHAP
+import shap # Added for SHAP
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier # Changed from LogisticRegression
 from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -10,9 +12,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from typing import Tuple, List, Any, Optional, Dict
 from pathlib import Path
+import datetime # For model versioning
 
 from src.core.config import settings # For model artifact path
 from src.data_management.knowledge_base import KnowledgeBaseService # To get data for training/prediction
+from src.mlops.model_registry import ModelRegistry # For model registration
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +34,12 @@ class PDModel:
 
         # Define feature engineering and preprocessing steps
         # These are example features. Real-world features would be more complex.
-        self.numerical_features = ['loan_amount_usd', 'interest_rate_percentage', 'company_revenue_usd_millions', 'company_age_years']
+        # Updated list of numerical features that will be fed into the model (some raw, some engineered)
+        self.numerical_features = [
+            'loan_amount_usd', 'interest_rate_percentage', 'loan_duration_days',
+            'company_age_at_origination', 'debt_to_equity_ratio', 'current_ratio',
+            'net_profit_margin', 'roe', 'loan_amount_x_interest_rate'
+        ]
         self.categorical_features = ['industry_sector', 'collateral_type'] # company_country_iso_code could be another
 
         preprocessor = ColumnTransformer(
@@ -41,7 +50,7 @@ class PDModel:
             remainder='drop' # or 'passthrough'
         )
         self.base_model = Pipeline(steps=[('preprocessor', preprocessor),
-                                          ('classifier', LogisticRegression(solver='liblinear', random_state=42))])
+                                          ('classifier', RandomForestClassifier(random_state=42, n_estimators=100))])
 
     def _prepare_features(self, kb_service: KnowledgeBaseService) -> pd.DataFrame:
         """
@@ -59,10 +68,47 @@ class PDModel:
                 logger.warning(f"Company {loan.company_id} not found for loan {loan.loan_id}. Skipping.")
                 continue
 
-            # Basic feature engineering
-            company_age = -1 # Default if no founded_date
-            if company.founded_date:
-                company_age = (pd.Timestamp('today').date() - company.founded_date).days / 365.25
+            # Time-based features
+            loan_duration_days = (loan.maturity_date - loan.origination_date).days if loan.maturity_date and loan.origination_date else -1
+
+            company_age_at_origination = -1
+            if company.founded_date and loan.origination_date:
+                if isinstance(company.founded_date, str): # ensure date object
+                    try: company.founded_date = pd.to_datetime(company.founded_date).date()
+                    except: company.founded_date = None
+                if isinstance(loan.origination_date, str): # ensure date object
+                    try: loan.origination_date = pd.to_datetime(loan.origination_date).date()
+                    except: loan.origination_date = None
+
+                if company.founded_date and loan.origination_date: # re-check after potential conversion
+                    company_age_at_origination = (loan.origination_date - company.founded_date).days / 365.25
+
+            # Financial Ratios from latest financial statement
+            debt_to_equity_ratio = np.nan
+            current_ratio = np.nan
+            net_profit_margin = np.nan
+            roe = np.nan
+
+            statements = kb_service.get_financial_statements_for_company(company.company_id)
+            if statements:
+                # Sort by statement_date to get the latest
+                statements.sort(key=lambda s: s.statement_date, reverse=True)
+                latest_fs = statements[0]
+
+                if latest_fs.total_liabilities_usd is not None and latest_fs.net_equity_usd is not None and latest_fs.net_equity_usd != 0:
+                    debt_to_equity_ratio = latest_fs.total_liabilities_usd / latest_fs.net_equity_usd
+
+                if latest_fs.current_assets is not None and latest_fs.current_liabilities is not None and latest_fs.current_liabilities != 0:
+                    current_ratio = latest_fs.current_assets / latest_fs.current_liabilities
+
+                if latest_fs.net_income is not None and latest_fs.revenue is not None and latest_fs.revenue != 0:
+                    net_profit_margin = latest_fs.net_income / latest_fs.revenue
+
+                if latest_fs.net_income is not None and latest_fs.net_equity_usd is not None and latest_fs.net_equity_usd != 0:
+                    roe = latest_fs.net_income / latest_fs.net_equity_usd
+
+            # Interaction term
+            loan_amount_x_interest_rate = loan.loan_amount * loan.interest_rate_percentage
 
             record = {
                 'loan_id': loan.loan_id,
@@ -71,9 +117,16 @@ class PDModel:
                 'interest_rate_percentage': loan.interest_rate_percentage,
                 'collateral_type': loan.collateral_type.value if loan.collateral_type else 'None',
                 'industry_sector': company.industry_sector.value if company.industry_sector else 'Other',
-                'company_revenue_usd_millions': company.revenue_usd_millions if company.revenue_usd_millions is not None else 0,
-                'company_age_years': company_age,
-                'default_status': int(loan.default_status) # Target variable
+                # New engineered features
+                'loan_duration_days': loan_duration_days,
+                'company_age_at_origination': company_age_at_origination,
+                'debt_to_equity_ratio': debt_to_equity_ratio,
+                'current_ratio': current_ratio,
+                'net_profit_margin': net_profit_margin,
+                'roe': roe,
+                'loan_amount_x_interest_rate': loan_amount_x_interest_rate,
+                # Target variable
+                'default_status': int(loan.default_status)
             }
             records.append(record)
 
@@ -120,19 +173,44 @@ class PDModel:
             logger.warning("Training or test set has only one class. Metrics might be misleading or fail.")
             # Handle this case, e.g., by skipping training or returning specific error
             if len(y_train.unique()) < 2:
-                 logger.error("Training set has only one class. Cannot train Logistic Regression. Aborting.")
+                 logger.error("Training set has only one class. Cannot train RandomForestClassifier. Aborting.")
                  return {"error": "Training set has only one class."}
 
-
+        # --- Conceptual Hyperparameter Tuning (GridSearchCV) ---
+        # from sklearn.model_selection import GridSearchCV
+        # param_grid = {
+        #     'classifier__n_estimators': [50, 100, 200],
+        #     'classifier__max_depth': [None, 10, 20],
+        #     'classifier__min_samples_split': [2, 5, 10]
+        # }
+        # # Note: 'classifier__' prefix is used because RandomForestClassifier is a step in the Pipeline
+        # grid_search = GridSearchCV(self.base_model, param_grid, cv=3, scoring='roc_auc', verbose=1, n_jobs=-1)
+        # grid_search.fit(X_train, y_train)
+        # logger.info(f"Best parameters found by GridSearchCV: {grid_search.best_params_}")
+        # self.model = grid_search.best_estimator_ # Use the best model found
+        # --- End Conceptual Hyperparameter Tuning ---
+        # If not using GridSearchCV, fit the base_model directly:
         self.model = self.base_model.fit(X_train, y_train)
 
         # Extract feature names after fitting for interpretability (optional)
+        # This is crucial for SHAP
         try:
-            ohe_feature_names = self.model.named_steps['preprocessor'].named_transformers_['cat'].named_steps['onehot'].get_feature_names_out(self.categorical_features)
-            self._feature_names = self.numerical_features + list(ohe_feature_names)
+            # Get feature names from the preprocessor step
+            self._feature_names = self.model.named_steps['preprocessor'].get_feature_names_out()
+            logger.info(f"Extracted feature names for SHAP: {self._feature_names}")
         except Exception as e:
-            logger.warning(f"Could not extract feature names after OHE: {e}")
-            self._feature_names = X_train.columns.tolist() # Fallback, might not be fully accurate with OHE
+            logger.error(f"Could not extract feature names using get_feature_names_out(): {e}")
+            # Fallback: manually construct if the above fails (less robust)
+            try:
+                ohe_feature_names = self.model.named_steps['preprocessor'].named_transformers_['cat'].named_steps['onehot'].get_feature_names_out(self.categorical_features)
+                # Note: self.numerical_features should correspond to the columns passed to 'num' transformer
+                # Ensure the order matches how ColumnTransformer concatenates them. Usually 'num' then 'cat'.
+                self._feature_names = self.numerical_features + list(ohe_feature_names)
+                logger.info(f"Fallback extracted feature names for SHAP: {self._feature_names}")
+            except Exception as e_fallback:
+                logger.error(f"Fallback for extracting feature names also failed: {e_fallback}")
+                self._feature_names = X_train.columns.tolist() # Least robust fallback
+
 
         y_pred_train = self.model.predict(X_train)
         y_pred_test = self.model.predict(X_test)
@@ -149,6 +227,27 @@ class PDModel:
 
         logger.info(f"Training complete. Metrics: {metrics}")
         self.save_model()
+
+        # Automate model registration
+        if "error" not in metrics: # Register only if training was successful
+            try:
+                registry = ModelRegistry()
+                model_params = self.model.named_steps['classifier'].get_params() if self.model else {}
+                # Generate a simple timestamp-based version for PoC
+                model_version = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+
+                registry.register_model(
+                    model_name="PDModel",
+                    model_version=model_version,
+                    model_path=str(self.model_path),
+                    metrics=metrics,
+                    parameters=model_params,
+                    tags={"stage": "training", "model_type": "RandomForestClassifier"}
+                )
+                logger.info(f"PDModel version {model_version} registered successfully.")
+            except Exception as e:
+                logger.error(f"Error during model registration for PDModel: {e}")
+
         return metrics
 
     def predict(self, new_data_df: pd.DataFrame) -> Optional[pd.DataFrame]:
@@ -206,35 +305,64 @@ class PDModel:
             logger.error("Model not trained or loaded.")
             return None
 
-        # Construct a DataFrame for the single prediction
-        company_age = -1
+        # Feature Engineering - align with _prepare_features as much as possible
+        # Time-based features
+        loan_origination_date_obj = None
+        if loan.get('origination_date'):
+            try: loan_origination_date_obj = pd.to_datetime(loan['origination_date']).date()
+            except: pass
+
+        loan_maturity_date_obj = None
+        if loan.get('maturity_date'):
+            try: loan_maturity_date_obj = pd.to_datetime(loan['maturity_date']).date()
+            except: pass
+
+        loan_duration_days = -1
+        if loan_maturity_date_obj and loan_origination_date_obj:
+            loan_duration_days = (loan_maturity_date_obj - loan_origination_date_obj).days
+
+        company_age_at_origination = -1
+        company_founded_date_obj = None
         if company.get('founded_date'):
-            # Ensure founded_date is a date object if string
-            founded_dt = company['founded_date']
-            if isinstance(founded_dt, str):
-                try:
-                    founded_dt = pd.to_datetime(founded_dt).date()
-                except ValueError:
-                    logger.warning(f"Could not parse founded_date string: {founded_dt}")
-                    founded_dt = None
-            if founded_dt:
-                 company_age = (pd.Timestamp('today').date() - founded_dt).days / 365.25
+            try: company_founded_date_obj = pd.to_datetime(company['founded_date']).date()
+            except: pass
+
+        if company_founded_date_obj and loan_origination_date_obj:
+            company_age_at_origination = (loan_origination_date_obj - company_founded_date_obj).days / 365.25
+
+        # Financial Ratios - Will be NaN as we don't have FS here
+        debt_to_equity_ratio = np.nan
+        current_ratio = np.nan
+        net_profit_margin = np.nan
+        roe = np.nan
+
+        # Interaction term
+        loan_amount_val = loan.get('loan_amount', 0)
+        interest_rate_val = loan.get('interest_rate_percentage', 0)
+        loan_amount_x_interest_rate = loan_amount_val * interest_rate_val
 
         record = {
-            'loan_amount_usd': loan.get('loan_amount'), # Assuming 'loan_amount' from LoanAgreement
-            'interest_rate_percentage': loan.get('interest_rate_percentage'),
-            'collateral_type': str(loan.get('collateral_type', 'None')),
-            'industry_sector': str(company.get('industry_sector', 'Other')),
-            'company_revenue_usd_millions': company.get('revenue_usd_millions', 0),
-            'company_age_years': company_age,
+            'loan_amount_usd': loan_amount_val,
+            'interest_rate_percentage': interest_rate_val,
+            'collateral_type': str(loan.get('collateral_type', 'None')), # Categorical
+            'industry_sector': str(company.get('industry_sector', 'Other')), # Categorical
+            'loan_duration_days': loan_duration_days,
+            'company_age_at_origination': company_age_at_origination,
+            'debt_to_equity_ratio': debt_to_equity_ratio,
+            'current_ratio': current_ratio,
+            'net_profit_margin': net_profit_margin,
+            'roe': roe,
+            'loan_amount_x_interest_rate': loan_amount_x_interest_rate,
         }
-        # Need to ensure all features defined in self.numerical_features and self.categorical_features are present
-        # Add any missing features with default values if they were part of training
-        for col in self.numerical_features + self.categorical_features:
-            if col not in record:
-                # A simple default strategy, might need refinement
-                record[col] = 0 if col in self.numerical_features else 'Unknown'
 
+        # Ensure all features defined in self.numerical_features and self.categorical_features are present
+        # This loop is more for safety, explicit definition above is preferred.
+        for col in self.numerical_features:
+            if col not in record:
+                record[col] = np.nan # Default for missing numerical
+        for col in self.categorical_features:
+            if col not in record:
+                record[col] = 'Unknown' # Default for missing categorical
 
         df_record = pd.DataFrame([record])
 
@@ -258,20 +386,129 @@ class PDModel:
             logger.warning("No model to save.")
 
     def load_model(self) -> bool:
-        """Loads a pre-trained model from the specified path."""
-        try:
-            if self.model_path.exists():
+        """Loads a pre-trained model from the specified path or falls back to registry."""
+        model_loaded_successfully = False
+        # Try loading from the specific model_path first (if it exists)
+        if self.model_path.exists():
+            try:
                 self.model = joblib.load(self.model_path)
-                logger.info(f"PD Model loaded from {self.model_path}")
+                logger.info(f"PD Model loaded from specified path: {self.model_path}")
                 # Potentially load feature names if saved separately
-                return True
-            else:
-                logger.warning(f"Model file not found at {self.model_path}. Model not loaded.")
-                return False
+                model_loaded_successfully = True
+            except Exception as e:
+                logger.error(f"Error loading PD model from {self.model_path}: {e}. Trying registry.")
+                self.model = None # Ensure model is None if loading fails
+
+        if not model_loaded_successfully:
+            logger.info(f"Model file not found at {self.model_path} or failed to load. Attempting to load 'production' model from registry.")
+            try:
+                registry = ModelRegistry()
+                prod_model_path_str = registry.get_production_model_path("PDModel")
+                if prod_model_path_str:
+                    prod_model_path = Path(prod_model_path_str)
+                    if prod_model_path.exists():
+                        self.model = joblib.load(prod_model_path)
+                        self.model_path = prod_model_path # Update model_path to the one loaded
+                        logger.info(f"PD Model (production) loaded from registry path: {self.model_path}")
+                        model_loaded_successfully = True
+                    else:
+                        logger.warning(f"Production model path from registry does not exist: {prod_model_path}")
+                else:
+                    logger.warning("No production PDModel found in registry.")
+            except Exception as e:
+                logger.error(f"Error loading production PDModel from registry: {e}")
+                self.model = None # Ensure model is None if registry loading fails
+
+        if not model_loaded_successfully:
+             logger.warning(f"PD Model could not be loaded from specified path or registry.")
+
+        return model_loaded_successfully
+
+    def get_feature_importance_shap(self, sample_instance_df: pd.DataFrame, num_explanations: int = 1) -> Optional[Dict[str, float]]:
+        """
+        Calculates SHAP feature importances for a sample instance (or multiple for summary).
+        For RandomForestClassifier, this returns the mean absolute SHAP value for each feature.
+        """
+        if self.model is None:
+            logger.error("Model is not trained or loaded. Cannot calculate SHAP values.")
+            return None
+
+        if not isinstance(self.model, Pipeline):
+            logger.error("Model is not a scikit-learn Pipeline. SHAP explainability for this structure might not be supported.")
+            return None
+
+        if 'preprocessor' not in self.model.named_steps or 'classifier' not in self.model.named_steps:
+            logger.error("Pipeline does not contain 'preprocessor' or 'classifier' steps.")
+            return None
+
+        classifier = self.model.named_steps['classifier']
+        if not hasattr(classifier, 'predict_proba') or not (isinstance(classifier, RandomForestClassifier)): # Add other tree-based models if needed
+            logger.warning(f"Classifier type {type(classifier)} may not be directly supported by shap.TreeExplainer or this SHAP implementation logic. Trying anyway.")
+
+        if not self._feature_names:
+            logger.error("Feature names are not available. Train model first or ensure _feature_names is populated.")
+            return None
+
+        try:
+            preprocessor = self.model.named_steps['preprocessor']
+            # Ensure sample_instance_df has the same columns as X used in train (before preprocessing)
+            # These are the raw features defined at the start of _prepare_features
+            # For this method, we expect a DataFrame with columns matching the *input* to _prepare_features,
+            # so we must ensure it has the correct columns for the preprocessor.
+            # The `sample_instance_df` should contain all columns listed in `self.numerical_features` and `self.categorical_features`
+            # that are used by the preprocessor.
+
+            # Transform the input data using the fitted preprocessor
+            transformed_sample_instance = preprocessor.transform(sample_instance_df)
+
+            # For some transformers (like SimpleImputer with add_indicator=True), the number of output features
+            # might change. get_feature_names_out() on the preprocessor is the source of truth.
+            if transformed_sample_instance.shape[1] != len(self._feature_names):
+                logger.error(f"Mismatch in transformed feature count ({transformed_sample_instance.shape[1]}) and stored feature names count ({len(self._feature_names)}). SHAP values might be misaligned.")
+                logger.error(f"Stored feature names: {self._feature_names}")
+                # Attempt to re-fetch feature names if possible, this indicates an issue in train() or feature list management
+                try:
+                    self._feature_names = self.model.named_steps['preprocessor'].get_feature_names_out()
+                    logger.info(f"Re-fetched feature names: {self._feature_names}")
+                    if transformed_sample_instance.shape[1] != len(self._feature_names):
+                         logger.error("Feature count mismatch persists even after re-fetching names. Aborting SHAP.")
+                         return None
+                except Exception as e_refetch:
+                    logger.error(f"Failed to re-fetch feature names: {e_refetch}. Aborting SHAP.")
+                    return None
+
+
+            explainer = shap.TreeExplainer(classifier)
+            shap_values = explainer.shap_values(transformed_sample_instance)
+
+            # For binary classification with RandomForest, shap_values is a list of two arrays (one for each class)
+            # We use shap_values[1] for the positive class (default)
+            # If multi-class, this would need adjustment.
+            if isinstance(shap_values, list) and len(shap_values) == 2:
+                shap_values_for_positive_class = shap_values[1]
+            else: # Handles cases like single class SHAP values or other formats (though TreeExplainer usually gives list for RF)
+                shap_values_for_positive_class = shap_values
+
+            # Mean absolute SHAP value for each feature across all samples (if multiple passed)
+            if shap_values_for_positive_class.ndim == 1: # Single instance explanation
+                mean_abs_shap = np.abs(shap_values_for_positive_class)
+            else: # Multiple instances
+                mean_abs_shap = np.abs(shap_values_for_positive_class).mean(axis=0)
+
+            feature_shap_dict = dict(zip(self._feature_names, mean_abs_shap))
+
+            # Sort by importance (absolute SHAP value)
+            sorted_feature_shap = dict(sorted(feature_shap_dict.items(), key=lambda item: item[1], reverse=True))
+
+            return sorted_feature_shap
+
         except Exception as e:
-            logger.error(f"Error loading PD model: {e}")
-            self.model = None # Ensure model is None if loading fails
-            return False
+            logger.error(f"Error calculating SHAP values: {e}")
+            logger.error(f"Sample instance columns: {sample_instance_df.columns.tolist()}")
+            logger.error(f"Expected (numerical then categorical): {self.numerical_features} + {self.categorical_features}")
+
+            return None
+
 
 if __name__ == "__main__":
     # This setup is for running the script directly for testing.
@@ -296,13 +533,54 @@ if __name__ == "__main__":
         train_metrics = pd_model_instance.train(kb_service=kb)
         logger.info(f"PD Model training metrics: {train_metrics}")
 
-        # Load the model (even though it's already in memory, to test loading)
-        logger.info("Loading PD model...")
-        load_success = pd_model_instance.load_model()
-        logger.info(f"Model loaded successfully: {load_success}")
+        # After training, list models from registry (to show the new one)
+        if "error" not in train_metrics:
+            registry = ModelRegistry()
+            logger.info("PD Models in registry after training:")
+            pd_models_in_registry = registry.list_models("PDModel")
+            for m in pd_models_in_registry:
+                logger.info(f"  - Version: {m['model_version']}, Path: {m['model_path']}, Status: {m.get('status')}, Metrics: {m.get('metrics')}")
 
-        if load_success and pd_model_instance.model is not None:
+            # Promote the just trained model to "production" for testing fallback loading
+            if pd_models_in_registry: # Check if any model was registered
+                latest_version = pd_models_in_registry[0]['model_version'] # Assumes latest is first
+                logger.info(f"Promoting PDModel version {latest_version} to 'production' for testing.")
+                registry.update_model_status("PDModel", latest_version, "production")
+
+
+        # Test fallback loading
+        logger.info("--- Testing Fallback Model Loading for PDModel ---")
+        # Create a new instance with a non-existent path to trigger fallback
+        pd_model_for_fallback_test = PDModel(model_path=Path("models_store/non_existent_pd_model.joblib"))
+        load_success_fallback = pd_model_for_fallback_test.load_model()
+        logger.info(f"PDModel fallback loading attempt. Success: {load_success_fallback}")
+        if load_success_fallback and pd_model_for_fallback_test.model is not None:
+            logger.info(f"Fallback PDModel loaded from: {pd_model_for_fallback_test.model_path}")
+        else:
+            logger.warning("Fallback PDModel loading failed or no production model was found.")
+
+
+        # Load the original model instance again to continue with its tests (if it was overwritten by fallback test)
+        # Or simply use the existing pd_model_instance which should still hold the trained model
+        # For clarity, let's assume pd_model_instance is still the primary one for subsequent tests.
+        # If the fallback test modified a shared registry that affects original instance, behavior might change.
+        # The registry is file-based, so pd_model_instance.load_model() would see changes if it reloads.
+
+        logger.info("--- Resuming tests with originally trained/loaded PDModel instance ---")
+        # Ensure the original instance has a model for subsequent tests
+        if pd_model_instance.model is None: # If it wasn't loaded or trained successfully initially
+            logger.info("Re-loading original PD model instance for subsequent tests...")
+            load_success = pd_model_instance.load_model() # This will now try registry if primary path failed
+            logger.info(f"Model loaded successfully for original instance: {load_success}")
+
+
+        if pd_model_instance.model is not None:
             # Prepare some sample data for prediction (using one of the existing loans/companies)
+            # Ensure kb_service is available and has data
+            if not kb.get_all_loans():
+                logger.error("No loans in KB for PDModel prediction test.")
+                return # or skip this part of test
+
             sample_loan_data = kb.get_all_loans()[0] # Take the first loan
             sample_company_data = kb.get_company_profile(sample_loan_data.company_id)
 
@@ -323,34 +601,47 @@ if __name__ == "__main__":
 
             # Test batch prediction with a DataFrame
             # Create a DataFrame from a couple of samples for testing predict()
-            test_records_for_predict = []
-            loans_for_predict = kb.get_all_loans()[:2] # Get first two loans
-            for l_data in loans_for_predict:
-                c_data = kb.get_company_profile(l_data.company_id)
-                if c_data:
-                    company_age_val = -1
-                    if c_data.founded_date:
-                        company_age_val = (pd.Timestamp('today').date() - c_data.founded_date).days / 365.25
+            # This needs to align with the new features. We'll use the first record from _prepare_features output
+            # before it's split, to test batch predict and SHAP.
 
-                    test_records_for_predict.append({
-                        'loan_amount_usd': l_data.loan_amount,
-                        'interest_rate_percentage': l_data.interest_rate_percentage,
-                        'collateral_type': l_data.collateral_type.value if l_data.collateral_type else 'None',
-                        'industry_sector': c_data.industry_sector.value if c_data.industry_sector else 'Other',
-                        'company_revenue_usd_millions': c_data.revenue_usd_millions if c_data.revenue_usd_millions is not None else 0,
-                        'company_age_years': company_age_val
-                    })
+            full_feature_df = pd_model_instance._prepare_features(kb_service=kb) # Re-run to get the full df
+            if not full_feature_df.empty:
+                # Prepare a sample for predict() - needs columns expected by the preprocessor
+                # These are the columns in X_train/X_test, which are listed in
+                # model.numerical_features and model.categorical_features
+                sample_for_batch_predict_df = full_feature_df.head(2).drop(['default_status', 'loan_id', 'company_id'], axis=1)
 
-            if test_records_for_predict:
-                test_df_for_predict = pd.DataFrame(test_records_for_predict)
-                logger.info(f"Predicting for batch data (first {len(test_df_for_predict)} loans):")
-                batch_predictions = pd_model_instance.predict(test_df_for_predict)
+                # Ensure all required columns for the preprocessor are present
+                missing_cols_predict = [col for col in pd_model_instance.numerical_features + pd_model_instance.categorical_features if col not in sample_for_batch_predict_df.columns]
+                if missing_cols_predict:
+                    logger.warning(f"Sample for batch predict is missing columns: {missing_cols_predict}. Adding with NaN/Unknown.")
+                    for col in missing_cols_predict:
+                        sample_for_batch_predict_df[col] = np.nan if col in pd_model_instance.numerical_features else 'Unknown'
+
+                logger.info(f"Predicting for batch data (first {len(sample_for_batch_predict_df)} loans):")
+                logger.info(f"Batch predict input columns: {sample_for_batch_predict_df.columns.tolist()}")
+                batch_predictions = pd_model_instance.predict(sample_for_batch_predict_df)
                 if batch_predictions is not None:
                     logger.info(f"Batch predictions:\n{batch_predictions}")
                 else:
                     logger.error("Failed to get batch predictions.")
-            else:
-                logger.warning("Not enough data to form a batch for prediction test.")
 
+                # Test SHAP Feature Importance
+                # SHAP also expects a DataFrame with columns that the preprocessor was trained on.
+                # Use the same sample_for_batch_predict_df or a single instance from it.
+                logger.info("--- Testing SHAP Feature Importance ---")
+                # Take the first instance from the sample batch
+                single_instance_for_shap = sample_for_batch_predict_df.head(1)
+                logger.info(f"Columns for SHAP sample: {single_instance_for_shap.columns.tolist()}")
+
+                shap_importances = pd_model_instance.get_feature_importance_shap(single_instance_for_shap)
+                if shap_importances:
+                    logger.info("SHAP Feature Importances (Mean Absolute SHAP for class 1):")
+                    for feature, importance in shap_importances.items():
+                        logger.info(f"  {feature}: {importance:.4f}")
+                else:
+                    logger.warning("Could not retrieve SHAP feature importances.")
+            else:
+                logger.warning("Full feature DataFrame is empty, skipping batch prediction and SHAP tests.")
         else:
-            logger.error("PD Model could not be loaded. Prediction tests skipped.")
+            logger.error("PD Model could not be loaded. Prediction and SHAP tests skipped.")

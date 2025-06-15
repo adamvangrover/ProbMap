@@ -15,7 +15,12 @@ def is_valid_uuid(uuid_to_test: str, version: int = 4) -> bool:
     bool: True if valid UUID, False otherwise.
     """
     try:
-        # Regex for UUID version 4
+        # Regex for UUID version 4:
+        # - 8 hex chars
+        # - 4 hex chars
+        # - '4' (version bit) followed by 3 hex chars
+        # - one of '8', '9', 'a', 'b' (variant bits) followed by 3 hex chars
+        # - 12 hex chars
         if version == 4:
             regex = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z', re.I)
             match = regex.match(uuid_to_test)
