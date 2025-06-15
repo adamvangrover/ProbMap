@@ -8,6 +8,7 @@ COMP006,FinServ Pro,Financial Services,USA,2018-02-20,45.50,,,,FS008,8
 COMP007,ManuCore Ltd,Manufacturing,JPN,2002-06-10,120.00,COMP904,SUPP804,,LOAN7006,FS009;FS010,7
 COMP008,RetailR Us,Other,FRA,2015-09-01,75.25,,,LOAN7007,FS011,6
 
+
 company_id,company_name,industry,country,year_founded,status,management_quality_score,loan_agreement_ids,industry_sector,country_iso_code,founded_date,revenue_usd_millions,subsidiaries,suppliers,customers,financial_statement_ids
 COMP001,Innovatech Solutions,,,,,8,LOAN7001;LOAN7002;LOAN7019,Technology,USA,2010-05-15,150.75,COMP901;COMP902,,CUST001;CUST002,FS001;FS002
 COMP002,GreenBuild Corp,,,,,7,LOAN7003;LOAN7008,Construction,CAN,2005-01-20,88.20,,SUPP801,CUST003,FS003;FS004

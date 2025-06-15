@@ -137,7 +137,7 @@ To run the notebooks:
 *   **Sophisticated Scenario Simulation:**
     *   `ScenarioGenerator` applies feature-level shocks (multiplicative, additive, override) to raw input features of a portfolio.
     *   `StressTester` takes the shocked portfolio and re-calculates PD and LGD using the trained models to assess the impact on Expected Loss, providing a more realistic stress impact than directly shocking PD/LGD values.
-*   **Consolidated Data Export:** Generates an Excel file (`output/consolidated_data_export.xlsx`) containing key data tables like portfolio overview, sector/country summaries, and company listings, suitable for external analysis in BI tools or spreadsheets. This is produced by the `notebooks/03_excel_data_exporter.ipynb` notebook.
+*   **Consolidated Data Export:** Generates an Excel file (`output/consolidated_data_export.xlsx`) containing key data tables like portfolio overview, sector/country summaries, and company listings, suitable for external analysis in BI tools or spreadsheets. This is produced by the `notebooks/03_excel_data_exporter.ipynb` notebook. This Excel file is accompanied by a markdown summary, `output/final_excel_summary.md`, which details the contents of each sheet.
 
 
 ## 5. Design Rationale & Logic

@@ -117,6 +117,11 @@ def generate_orchestration_manifest():
             "name": "Excel Data Exporter Notebook",
             "path": "notebooks/03_excel_data_exporter.ipynb",
             "description": "Jupyter notebook to generate and preview the consolidated Excel data export."
+        },
+        {
+            "name": "Final Excel Summary (Markdown)",
+            "path": "output/final_excel_summary.md",
+            "description": "Markdown file summarizing the content and structure of the consolidated_data_export.xlsx."
         }
 
     ]

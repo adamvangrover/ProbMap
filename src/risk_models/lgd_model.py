@@ -85,6 +85,7 @@ class LGDModel:
             elif seniority == 'Subordinated':
                 recovery_rate_adjusted -= 0.15
 
+
             # Adjustment for Economic Condition
             economic_indicator = loan.economic_condition_indicator if loan.economic_condition_indicator is not None else 0.5
             recovery_rate_adjustment_econ = (economic_indicator - 0.5) * 0.2 # Max +/- 0.1
@@ -320,7 +321,6 @@ if __name__ == "__main__":
             logger.info("Re-loading original LGD model instance for subsequent tests...")
             load_success_lgd = lgd_model_instance.load_model()
             logger.info(f"Model loaded successfully for original LGD instance: {load_success_lgd}")
-
 
         if lgd_model_instance.model is not None:
             # Test prediction with some sample features
