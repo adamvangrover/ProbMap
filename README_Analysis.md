@@ -41,6 +41,7 @@ The system is composed of several key logical components:
         *   `02_comprehensive_risk_analysis.ipynb`: The primary notebook showcasing the evolved system's capabilities.
         *   `03_excel_data_exporter.ipynb`: A notebook to generate a consolidated Excel export of key data tables.
 
+
 ## 3. Setup and Running the System
 
 ### 3.1. Prerequisites
@@ -98,6 +99,7 @@ The `notebooks/` directory contains demonstrations and analysis:
 *   `notebooks/02_comprehensive_risk_analysis.ipynb`: The primary analysis notebook demonstrating the full capabilities of the evolved system.
 *   `notebooks/03_excel_data_exporter.ipynb`: This notebook collects key data tables (portfolio overview, summaries, company data, synthetic asset examples) and exports them to `output/consolidated_data_export.xlsx`.
 
+
 To run the notebooks:
 1.  Ensure you have Jupyter Notebook or JupyterLab installed:
     ```bash
@@ -136,6 +138,7 @@ To run the notebooks:
     *   `ScenarioGenerator` applies feature-level shocks (multiplicative, additive, override) to raw input features of a portfolio.
     *   `StressTester` takes the shocked portfolio and re-calculates PD and LGD using the trained models to assess the impact on Expected Loss, providing a more realistic stress impact than directly shocking PD/LGD values.
 *   **Consolidated Data Export:** Generates an Excel file (`output/consolidated_data_export.xlsx`) containing key data tables like portfolio overview, sector/country summaries, and company listings, suitable for external analysis in BI tools or spreadsheets. This is produced by the `notebooks/03_excel_data_exporter.ipynb` notebook. This Excel file is accompanied by a markdown summary, `output/final_excel_summary.md`, which details the contents of each sheet.
+
 
 ## 5. Design Rationale & Logic
 

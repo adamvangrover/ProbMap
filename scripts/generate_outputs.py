@@ -123,6 +123,7 @@ def generate_orchestration_manifest():
             "path": "output/final_excel_summary.md",
             "description": "Markdown file summarizing the content and structure of the consolidated_data_export.xlsx."
         }
+
     ]
 
     manifest = {
