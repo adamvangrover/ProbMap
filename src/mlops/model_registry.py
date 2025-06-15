@@ -129,6 +129,16 @@ class ModelRegistry:
         logger.warning(f"Cannot update status. Model {model_name} v{model_version} not found.")
         return False
 
+    def get_production_model_path(self, model_name: str) -> Optional[str]:
+        """
+        Retrieves the model_path for the latest model marked as 'production'.
+        """
+        prod_model_entry = self.get_latest_model(model_name, status="production")
+        if prod_model_entry:
+            return str(prod_model_entry.get("model_path"))
+        logger.info(f"No production model path found for {model_name}.")
+        return None
+
 
 if __name__ == "__main__":
     if not logging.getLogger().hasHandlers():

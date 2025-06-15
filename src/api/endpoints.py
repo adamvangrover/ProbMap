@@ -51,6 +51,13 @@ pricing_model_instance = PricingModel()
 
 # --- Helper function to get or construct company/loan data for models ---
 def _get_model_input_data(company_input: schemas.CompanyInput, loan_input: schemas.LoanInput, kb: KnowledgeBaseService) -> Dict[str, Any]:
+    """
+    Prepares company and loan data dictionaries for model prediction.
+    It attempts to fetch existing company data from the Knowledge Base (KB).
+    If not found, or for loan data (which is often new/hypothetical),
+    it uses the data provided in the input schemas.
+    It also applies defaults for fields critical to models if they are missing.
+    """
     warnings = []
     # Company data: Try to fetch from KB, else use provided input
     company_data_for_model: Dict[str, Any] = {}
@@ -160,7 +167,9 @@ async def calculate_risk_metrics(request: schemas.RiskMetricsRequest = Body(...)
         # LGD model expects features like 'collateral_type', 'loan_amount_usd'
         lgd_features = {
             'collateral_type': loan_dict.get('collateral_type', CollateralType.NONE.value),
-            'loan_amount_usd': loan_dict.get('loan_amount', 0)
+            'loan_amount_usd': loan_dict.get('loan_amount', 0),
+            'seniority_of_debt': loan_dict.get('seniority_of_debt', 'Unknown'), # Added
+            'economic_condition_indicator': loan_dict.get('economic_condition_indicator', 0.5) # Added
         }
         lgd_val = lgd_model_instance.predict_lgd(lgd_features)
     else:
@@ -211,7 +220,9 @@ async def price_loan(request: schemas.LoanPricingRequest = Body(...)):
         if lgd_model_instance.model:
             lgd_features = {
                 'collateral_type': loan_dict_for_models.get('collateral_type', CollateralType.NONE.value),
-                'loan_amount_usd': loan_dict_for_models.get('loan_amount', 0)
+                'loan_amount_usd': loan_dict_for_models.get('loan_amount', 0),
+                'seniority_of_debt': loan_dict_for_models.get('seniority_of_debt', 'Unknown'), # Added
+                'economic_condition_indicator': loan_dict_for_models.get('economic_condition_indicator', 0.5) # Added
             }
             lgd_to_use = lgd_model_instance.predict_lgd(lgd_features)
         else:
