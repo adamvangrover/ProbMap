@@ -35,10 +35,12 @@ The system is composed of several key logical components:
     *   A FastAPI application that provides conceptual endpoints for interacting with the system (e.g., fetching company info, calculating risk metrics, pricing loans). For this PoC, full interaction and demonstration are primarily through code and Jupyter notebooks.
 
 *   **Outputs & Notebooks:**
-    *   `Output Generation (scripts/generate_outputs.py)`: A script to produce an `orchestration_manifest.json` (cataloging data sources, models, services) and an example `risk_profiles.jsonld` file.
+    *   `Output Generation (scripts/generate_outputs.py)`: A script to produce an `orchestration_manifest.json` (cataloging data sources, models, services) and an example `risk_profiles.jsonld` file. The manifest is also updated by this script to include other key outputs like the Excel export.
     *   `Analysis Notebooks (notebooks/)`: Jupyter notebooks to demonstrate system usage, data exploration, model training, and comprehensive risk analysis.
         *   `01_data_and_pd_model_demo.ipynb`: Original PoC demo.
         *   `02_comprehensive_risk_analysis.ipynb`: The primary notebook showcasing the evolved system's capabilities.
+        *   `03_excel_data_exporter.ipynb`: A notebook to generate a consolidated Excel export of key data tables.
+
 
 ## 3. Setup and Running the System
 
@@ -95,6 +97,8 @@ To generate the orchestration manifest and an example JSON-LD file:
 The `notebooks/` directory contains demonstrations and analysis:
 *   `notebooks/01_data_and_pd_model_demo.ipynb`: The original PoC demo notebook. It might be slightly outdated compared to the latest enhancements but shows basic data loading and PD model training from that phase.
 *   `notebooks/02_comprehensive_risk_analysis.ipynb`: The primary analysis notebook demonstrating the full capabilities of the evolved system.
+*   `notebooks/03_excel_data_exporter.ipynb`: This notebook collects key data tables (portfolio overview, summaries, company data, synthetic asset examples) and exports them to `output/consolidated_data_export.xlsx`.
+
 
 To run the notebooks:
 1.  Ensure you have Jupyter Notebook or JupyterLab installed:
@@ -133,6 +137,8 @@ To run the notebooks:
 *   **Sophisticated Scenario Simulation:**
     *   `ScenarioGenerator` applies feature-level shocks (multiplicative, additive, override) to raw input features of a portfolio.
     *   `StressTester` takes the shocked portfolio and re-calculates PD and LGD using the trained models to assess the impact on Expected Loss, providing a more realistic stress impact than directly shocking PD/LGD values.
+*   **Consolidated Data Export:** Generates an Excel file (`output/consolidated_data_export.xlsx`) containing key data tables like portfolio overview, sector/country summaries, and company listings, suitable for external analysis in BI tools or spreadsheets. This is produced by the `notebooks/03_excel_data_exporter.ipynb` notebook.
+
 
 ## 5. Design Rationale & Logic
 

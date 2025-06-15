@@ -107,6 +107,16 @@ def generate_orchestration_manifest():
             "name": "Conceptual Peer Comparison Plot",
             "path": "output/plot_peer_comparison.png",
             "description": "Static plot from analysis notebook showing conceptual company vs. peer metrics."
+        },
+        {
+            "name": "Consolidated Data Export (Excel)",
+            "path": "output/consolidated_data_export.xlsx",
+            "description": "Excel file with key data tables: Portfolio Overview, Sector Summary, Country Summary, Companies KB, Synthetic Equities & Commodities."
+        },
+        {
+            "name": "Excel Data Exporter Notebook",
+            "path": "notebooks/03_excel_data_exporter.ipynb",
+            "description": "Jupyter notebook to generate and preview the consolidated Excel data export."
         }
 
     ]
