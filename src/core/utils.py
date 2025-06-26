@@ -14,31 +14,36 @@ def is_valid_uuid(uuid_to_test: str, version: int = 4) -> bool:
     Returns:
     bool: True if valid UUID, False otherwise.
     """
-    try:
+    if not isinstance(uuid_to_test, str): # Explicitly handle non-string inputs
+        return False
+
+    if version == 4:
         # Regex for UUID version 4:
         # - 8 hex chars
         # - 4 hex chars
         # - '4' (version bit) followed by 3 hex chars
         # - one of '8', '9', 'a', 'b' (variant bits) followed by 3 hex chars
         # - 12 hex chars
-        if version == 4:
-            regex = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z', re.I)
-            match = regex.match(uuid_to_test)
-            return bool(match)
-        # Add regex for other versions if needed
-        # For simplicity, only v4 is fully implemented here.
-        # A more robust solution might use the 'uuid' module:
-        # import uuid
-        # try:
-        #     uuid_obj = uuid.UUID(uuid_to_test, version=version)
-        #     return str(uuid_obj) == uuid_to_test # Ensure it's not just a prefix
-        # except ValueError:
-        #     return False
-        else: # Placeholder for other versions
-            raise NotImplementedError(f"UUID version {version} validation not implemented.")
+        regex = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z', re.I)
+        match = regex.match(uuid_to_test)
+        return bool(match)
+    # Add regex for other versions if needed
+    # For simplicity, only v4 is fully implemented here.
+    # A more robust solution might use the 'uuid' module:
+    # import uuid
+    # try:
+    #     uuid_obj = uuid.UUID(uuid_to_test, version=version)
+    #     return str(uuid_obj) == uuid_to_test # Ensure it's not just a prefix
+    # except ValueError:
+    #     return False
+    else: # Placeholder for other versions
+        # This error should propagate if the version is not implemented.
+        raise NotImplementedError(f"UUID version {version} validation not implemented.")
 
-    except Exception:
-        return False
+    # Removed the broad try-except Exception: return False
+    # If re.compile or .match were to raise an unexpected error for some input,
+    # it would now propagate, which is generally better for debugging.
+    # The primary expected "failure" is bool(match) being False.
 
 if __name__ == "__main__":
     print(f"Current ISO Timestamp: {get_current_timestamp_iso()}")

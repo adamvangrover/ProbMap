@@ -75,25 +75,29 @@ class KnowledgeGraphService:
             # Process subsidiaries
             for subsidiary_id in company_attributes['subsidiaries']:
                 if subsidiary_id in company_ids_in_kb: # Ensure subsidiary is a known company
-                     self.add_node(subsidiary_id, node_type="CorporateEntity") # Ensure node exists, attributes added if/when full subsidiary processed
+                     self.add_node(subsidiary_id, node_type="CorporateEntity")
                      self.add_edge(company.company_id, subsidiary_id, RelationshipType.HAS_SUBSIDIARY)
                      self.add_edge(subsidiary_id, company.company_id, RelationshipType.SUBSIDIARY_OF)
                 else:
                     logger.warning(f"Subsidiary ID {subsidiary_id} for company {company.company_id} not found in KB companies. Node created, but may lack attributes.")
-                    self.add_node(subsidiary_id, node_type="CorporateEntity", name=f"Placeholder {subsidiary_id}")
+                    self.add_node(subsidiary_id, node_type="CorporateEntity", name=f"Placeholder {subsidiary_id}", is_placeholder=True)
 
 
             # Process suppliers
             for supplier_id in company_attributes['suppliers']:
-                # Assuming suppliers are also companies, ensure they exist as nodes
-                # If they are not in all_companies, they might be external or placeholder nodes
-                self.add_node(supplier_id, node_type="CorporateEntity") # Ensure node exists
+                if supplier_id not in company_ids_in_kb: # If supplier is not a known full company entity
+                    self.add_node(supplier_id, node_type="CorporateEntity", name=f"Placeholder {supplier_id}", is_placeholder=True)
+                else: # Supplier is a known company, ensure it's added (attributes might be updated later)
+                    self.add_node(supplier_id, node_type="CorporateEntity")
                 self.add_edge(company.company_id, supplier_id, RelationshipType.HAS_SUPPLIER)
                 self.add_edge(supplier_id, company.company_id, RelationshipType.SUPPLIER_TO)
 
             # Process customers
             for customer_id in company_attributes['customers']:
-                self.add_node(customer_id, node_type="CorporateEntity") # Ensure node exists
+                if customer_id not in company_ids_in_kb: # If customer is not a known full company entity
+                    self.add_node(customer_id, node_type="CorporateEntity", name=f"Placeholder {customer_id}", is_placeholder=True)
+                else: # Customer is a known company
+                    self.add_node(customer_id, node_type="CorporateEntity")
                 self.add_edge(company.company_id, customer_id, RelationshipType.HAS_CUSTOMER)
                 self.add_edge(customer_id, company.company_id, RelationshipType.CUSTOMER_OF)
 

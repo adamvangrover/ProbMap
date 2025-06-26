@@ -579,7 +579,7 @@ if __name__ == "__main__":
             # Ensure kb_service is available and has data
             if not kb.get_all_loans():
                 logger.error("No loans in KB for PDModel prediction test.")
-                return # or skip this part of test
+                pass # or skip this part of test
 
             sample_loan_data = kb.get_all_loans()[0] # Take the first loan
             sample_company_data = kb.get_company_profile(sample_loan_data.company_id)
