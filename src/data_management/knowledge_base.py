@@ -41,9 +41,32 @@ class KnowledgeBaseService:
             logger.info(f"Loading company data from: {self.companies_data_path}")
             raw_companies_df = pd.read_csv(self.companies_data_path)
 
+            if raw_companies_df.empty:
+                logger.error(f"Company DataFrame loaded from {self.companies_data_path} is EMPTY.")
+
             validated_companies = []
             for _, row in raw_companies_df.iterrows():
-                company_dict = row.where(pd.notnull(row), None).to_dict()
+                company_dict_raw = row.where(pd.notnull(row), None).to_dict()
+                # Filter to include only fields defined in CorporateEntity
+                company_dict = {k: v for k, v in company_dict_raw.items() if k in CorporateEntity.model_fields}
+
+                # Handle potential empty strings for optional numeric fields from CSV before Pydantic validation
+                optional_numeric_fields = {
+                    'revenue_usd_millions': float,
+                    'management_quality_score': int,
+                    # Add any other Optional[numeric] fields from CorporateEntity here
+                }
+                for num_field, field_type in optional_numeric_fields.items():
+                    if num_field in company_dict and company_dict[num_field] == '':
+                        company_dict[num_field] = None
+                    # Optionally, try to convert if it's a non-empty string but Pydantic might need help
+                    # elif num_field in company_dict and isinstance(company_dict[num_field], str) and company_dict[num_field]:
+                    #     try:
+                    #         company_dict[num_field] = field_type(company_dict[num_field])
+                    #     except ValueError:
+                    #         logger.warning(f"Could not convert value for {num_field} in company {company_dict.get('company_id')}, setting to None. Value: {company_dict[num_field]}")
+                    #         company_dict[num_field] = None
+
 
                 # Parse semicolon-separated fields into lists
                 list_fields = ['subsidiaries', 'suppliers', 'customers', 'loan_agreement_ids', 'financial_statement_ids']
@@ -65,10 +88,13 @@ class KnowledgeBaseService:
                         logger.warning(f"Could not parse founded_date for {company_dict.get('company_id')}: {company_dict['founded_date']}. Setting to None.")
                         company_dict['founded_date'] = None
 
+                from pydantic import ValidationError # Local import for specific catch
                 try:
                     validated_companies.append(CorporateEntity(**company_dict))
+                except ValidationError as ve:
+                    logger.error(f"PYDANTIC VALIDATION ERROR for company {company_dict.get('company_id')}: {ve.errors()}. Data: {company_dict}")
                 except Exception as e:
-                    logger.error(f"Validation error for company {company_dict.get('company_id')}: {e}. Data: {company_dict}")
+                    logger.error(f"GENERAL ERROR validating company {company_dict.get('company_id')}: {e}. Data: {company_dict}")
 
             # For now, keep companies as a DataFrame of validated dicts for easier filtering with pandas syntax.
             # Alternatively, store a list of CorporateEntity objects.
@@ -245,26 +271,17 @@ class KnowledgeBaseService:
             return []
 
         company_loans = []
-        for loan_dict in self._loans_data:
-            if loan_dict.get('company_id') == company_id:
-                try:
-                    company_loans.append(LoanAgreement(**loan_dict))
-                except Exception as e:
-                    logger.error(f"Error creating LoanAgreement for loan {loan_dict.get('loan_id')}: {e}. Data: {loan_dict}")
+        for loan_obj in self._loans_data: # Iterate over LoanAgreement objects
+            if loan_obj.company_id == company_id: # Access attributes directly
+                company_loans.append(loan_obj)
         return company_loans
 
     def get_all_loans(self) -> List[LoanAgreement]:
         """Retrieves all loan records."""
         if not self._loans_data:
             return []
-
-        all_loans = []
-        for loan_dict in self._loans_data:
-            try:
-                all_loans.append(LoanAgreement(**loan_dict))
-            except Exception as e:
-                logger.error(f"Error creating LoanAgreement for loan {loan_dict.get('loan_id')}: {e}. Data: {loan_dict}")
-        return all_loans
+        # self._loans_data already contains LoanAgreement objects
+        return self._loans_data
 
     # Conceptual methods for a production system with Vega DB
     def store_company_profile(self, company: CorporateEntity) -> bool:
