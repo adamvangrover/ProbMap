@@ -1,0 +1,64 @@
+[
+  {
+    "annotation_id": "hitl_comp001_mqs_1",
+    "entity_id": "COMP001",
+    "annotation_target_field": "management_quality_score",
+    "annotation_type": "company",
+    "hitl_review_status": "OVERRIDDEN",
+    "hitl_analyst_notes": "Management team is strong and experienced. Previous positive track record. Adjusted score up.",
+    "previous_value_numeric": 7,
+    "new_value_numeric": 8,
+    "annotator_id": "analyst_john_doe",
+    "annotation_timestamp": "2023-10-26T10:00:00Z",
+    "version": 1
+  },
+  {
+    "annotation_id": "hitl_loan7002_pd_1",
+    "entity_id": "LOAN7002",
+    "annotation_target_field": "pd_estimate",
+    "annotation_type": "loan",
+    "hitl_review_status": "FLAGGED_MODEL_DISAGREEMENT",
+    "hitl_analyst_notes": "Unusual collateral type for this loan size. Model PD seems too low. Suggesting override.",
+    "previous_value_numeric": 0.052,
+    "new_value_numeric": 0.085,
+    "override_confidence": 0.75,
+    "reason_code": "QUALITATIVE_OVERLAY_COLLATERAL",
+    "annotator_id": "analyst_jane_smith",
+    "annotation_timestamp": "2023-10-27T14:30:00Z",
+    "version": 1
+  },
+  {
+    "annotation_id": "hitl_comp003_status_1",
+    "entity_id": "COMP003",
+    "annotation_target_field": null,
+    "annotation_type": "company",
+    "hitl_review_status": "PENDING_REVIEW",
+    "hitl_analyst_notes": "New information received, requires full analyst review.",
+    "annotator_id": "system_flag",
+    "annotation_timestamp": "2023-10-25T09:00:00Z",
+    "version": 1
+  },
+  {
+    "annotation_id": "hitl_loan7004_lgd_1",
+    "entity_id": "LOAN7004",
+    "annotation_target_field": "lgd_estimate",
+    "annotation_type": "loan",
+    "hitl_review_status": "REVIEWED_OK",
+    "hitl_analyst_notes": "Defaulted loan. LGD model estimate aligns with recovery expectations after reviewing workout plan.",
+    "previous_value_numeric": 0.60,
+    "annotator_id": "analyst_john_doe",
+    "annotation_timestamp": "2023-10-28T11:15:00Z",
+    "version": 1
+  },
+  {
+    "annotation_id": "hitl_comp001_note_1",
+    "entity_id": "COMP001",
+    "annotation_target_field": null,
+    "annotation_type": "company",
+    "hitl_review_status": "REVIEWED_OK",
+    "hitl_analyst_notes": "Follow-up: Q3 results are in line with expectations.",
+    "annotator_id": "analyst_john_doe",
+    "annotation_timestamp": "2023-11-01T12:00:00Z",
+    "version": 1
+  }
+]

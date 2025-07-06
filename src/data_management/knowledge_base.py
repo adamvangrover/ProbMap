@@ -3,9 +3,10 @@ import json
 import logging
 from typing import List, Dict, Optional, Any
 from pathlib import Path
+import datetime
 
 from src.core.config import settings # Using settings for data paths
-from src.data_management.ontology import CorporateEntity, LoanAgreement, FinancialStatement, DefaultEvent, IndustrySector, Currency, CollateralType # Import Pydantic models
+from src.data_management.ontology import CorporateEntity, LoanAgreement, FinancialStatement, DefaultEvent, IndustrySector, Currency, CollateralType, HITLAnnotation # Import Pydantic models
 
 logger = logging.getLogger(__name__)
 
@@ -19,18 +20,22 @@ class KnowledgeBaseService:
                  companies_data_path: Path = None,
                  loans_data_path: Path = None,
                  financial_statements_path: Path = None,
-                 default_events_path: Path = None):
+                 default_events_path: Path = None,
+                 hitl_annotations_path: Path = None): # New parameter
         base_data_dir = Path("data") # Default base directory
         self.companies_data_path = companies_data_path or base_data_dir / "sample_companies.csv"
         self.loans_data_path = loans_data_path or base_data_dir / "sample_loans.json"
         self.financial_statements_path = financial_statements_path or base_data_dir / "sample_financial_statements.json"
         self.default_events_path = default_events_path or base_data_dir / "sample_default_events.json"
+        self.hitl_annotations_path = hitl_annotations_path or base_data_dir / "sample_hitl_annotations.json" # New path
 
         self._companies_df: Optional[pd.DataFrame] = None
-        # Store validated Pydantic objects instead of raw dicts
         self._loans_data: Optional[List[LoanAgreement]] = None
         self._financial_statements_data: Optional[List[FinancialStatement]] = None
         self._default_events_data: Optional[List[DefaultEvent]] = None
+        # Store HITL annotations: Dict[entity_id, List[HITLAnnotation]]
+        # An entity can have multiple annotations (e.g. different fields, or by different analysts over time)
+        self._hitl_annotations_data: Dict[str, List[HITLAnnotation]] = {}
 
         self._load_data()
 
@@ -180,6 +185,66 @@ class KnowledgeBaseService:
             logger.error(f"Error decoding JSON from {self.default_events_path}: {e}")
         except Exception as e:
             logger.error(f"Error loading or validating default event data: {e}")
+
+        # Load HITL Annotations
+        self._hitl_annotations_data = {}
+        try:
+            logger.info(f"Loading HITL annotations from: {self.hitl_annotations_path}")
+            with open(self.hitl_annotations_path, 'r') as f:
+                raw_hitl_data = json.load(f)
+
+            validated_annotations = 0
+            for hitl_dict in raw_hitl_data:
+                try:
+                    annotation = HITLAnnotation(**hitl_dict)
+                    entity_key = f"{annotation.annotation_type}:{annotation.entity_id}"
+                    if entity_key not in self._hitl_annotations_data:
+                        self._hitl_annotations_data[entity_key] = []
+                    self._hitl_annotations_data[entity_key].append(annotation)
+                    # Sort annotations by timestamp descending for each entity, so latest is first
+                    self._hitl_annotations_data[entity_key].sort(key=lambda x: x.annotation_timestamp, reverse=True)
+                    validated_annotations += 1
+                except Exception as e:
+                    logger.error(f"Validation error for HITL annotation on entity_id {hitl_dict.get('entity_id')} (type: {hitl_dict.get('annotation_type')}): {e}. Data: {hitl_dict}")
+            logger.info(f"Loaded and validated {validated_annotations} HITL annotation records, grouped by entity and type.")
+        except FileNotFoundError:
+            logger.warning(f"HITL annotations file not found at {self.hitl_annotations_path}. No HITL data loaded.")
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding JSON from {self.hitl_annotations_path}: {e}")
+        except Exception as e:
+            logger.error(f"Error loading or validating HITL annotation data: {e}")
+
+
+    def get_hitl_annotations_for_entity(self, entity_id: str, annotation_type: str) -> List[HITLAnnotation]:
+        """
+        Retrieves all HITL annotations for a specific entity ID and type, sorted by timestamp descending (latest first).
+        Returns an empty list if no annotations are found.
+        """
+        key = f"{annotation_type}:{entity_id}"
+        return self._hitl_annotations_data.get(key, [])
+
+    def get_latest_hitl_annotation_for_field(
+        self,
+        entity_id: str,
+        annotation_type: str,
+        target_field: Optional[str] = None
+    ) -> Optional[HITLAnnotation]:
+        """
+        Retrieves the most recent HITL annotation for a specific entity, type, and optionally target_field.
+        If target_field is None, it returns the overall latest annotation for the entity-type pair.
+        If target_field is specified, it returns the latest annotation for that specific field.
+        """
+        annotations = self.get_hitl_annotations_for_entity(entity_id, annotation_type)
+        if not annotations:
+            return None
+
+        if target_field:
+            for anno in annotations: # Already sorted by timestamp desc
+                if anno.annotation_target_field == target_field:
+                    return anno
+            return None # No annotation for this specific field
+        else:
+            return annotations[0] # Return the overall latest annotation
 
     def get_company_profile(self, company_id: str) -> Optional[CorporateEntity]:
         """Retrieves a company profile by its ID."""
@@ -382,11 +447,38 @@ if __name__ == "__main__":
     if all_loans:
         logger.info(f"First loaded loan ID: {all_loans[0].loan_id}, Default Status: {all_loans[0].default_status}")
 
-    # Test with non-existent files (manual test by renaming files)
-    # logger.info("\n--- Testing with non-existent files (manual test needed) ---")
-    # kb_service_missing = KnowledgeBaseService(
-    #     companies_data_path=Path("data/missing_companies.csv"),
-    #     loans_data_path=Path("data/missing_loans.json")
+    logger.info("\n--- Testing HITL Annotation Loading ---")
+    # Test retrieving all annotations for an entity
+    comp1_annos = kb_service.get_hitl_annotations_for_entity(entity_id="COMP001", annotation_type="company")
+    logger.info(f"Annotations for COMP001 (company): {len(comp1_annos)}")
+    if comp1_annos:
+        for anno in comp1_annos:
+            logger.info(f"  Annotation ID: {anno.annotation_id}, Target: {anno.annotation_target_field}, Status: {anno.hitl_review_status}, Notes: {anno.hitl_analyst_notes}, NewVal: {anno.new_value_numeric}")
+
+    loan2_annos = kb_service.get_hitl_annotations_for_entity(entity_id="LOAN7002", annotation_type="loan")
+    logger.info(f"Annotations for LOAN7002 (loan): {len(loan2_annos)}")
+    if loan2_annos:
+        logger.info(f"  Latest LOAN7002 Annotation ID: {loan2_annos[0].annotation_id}, Target: {loan2_annos[0].annotation_target_field}, New PD: {loan2_annos[0].new_value_numeric}")
+
+    # Test retrieving the latest specific field annotation
+    latest_mqs_comp001 = kb_service.get_latest_hitl_annotation_for_field(entity_id="COMP001", annotation_type="company", target_field="management_quality_score")
+    if latest_mqs_comp001:
+        logger.info(f"Latest MQS annotation for COMP001: New Score = {latest_mqs_comp001.new_value_numeric}, By: {latest_mqs_comp001.annotator_id}")
+
+    latest_pd_loan7002 = kb_service.get_latest_hitl_annotation_for_field(entity_id="LOAN7002", annotation_type="loan", target_field="pd_estimate")
+    if latest_pd_loan7002:
+        logger.info(f"Latest PD annotation for LOAN7002: New PD = {latest_pd_loan7002.new_value_numeric}, Notes: {latest_pd_loan7002.hitl_analyst_notes}")
+
+    non_existent_anno = kb_service.get_latest_hitl_annotation_for_field(entity_id="NON_EXISTENT", annotation_type="company")
+    if not non_existent_anno:
+        logger.info("Correctly did not find annotations for NON_EXISTENT company.")
+
+    # Example of how data paths could be explicitly passed (though default paths are used above)
+    # custom_kb_service = KnowledgeBaseService(
+    #     companies_data_path=Path("data/sample_companies.csv"),
+    #     loans_data_path=Path("data/sample_loans.json"),
+    #     financial_statements_path=Path("data/sample_financial_statements.json"),
+    #     default_events_path=Path("data/sample_default_events.json"),
+    #     hitl_annotations_path=Path("data/sample_hitl_annotations.json")
     # )
-    # logger.info(f"Companies loaded with missing file: {len(kb_service_missing.get_all_companies())}")
-    # logger.info(f"Loans loaded with missing file: {len(kb_service_missing.get_all_loans())}")
+    # logger.info(f"Custom KB loaded {len(custom_kb_service.get_all_companies())} companies.")

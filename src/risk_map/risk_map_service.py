@@ -2,305 +2,360 @@ import logging
 from typing import List, Dict, Any, Optional
 
 from src.data_management.knowledge_base import KnowledgeBaseService
-from src.data_management.ontology import LoanAgreement, CorporateEntity
+from src.data_management.ontology import LoanAgreement, CorporateEntity, RiskItem, HITLAnnotation, HITLReviewStatus
 from src.risk_models.pd_model import PDModel
 from src.risk_models.lgd_model import LGDModel
 from src.data_management.knowledge_graph import KnowledgeGraphService
+import datetime
+import json # For pretty printing in __main__
 
 logger = logging.getLogger(__name__)
 
 class RiskMapService:
-    """
-    Service to generate data for the dynamic corporate risk rating map.
-    For PoC, this focuses on aggregating risk metrics (PD, LGD, EL)
-    for a portfolio of loans/companies. Visualization is out of scope for this PoC.
-    """
     def __init__(self,
                  kb_service: KnowledgeBaseService,
                  pd_model: PDModel,
                  lgd_model: LGDModel,
-                 kg_service: Optional[KnowledgeGraphService] = None
-                 ):
+                 kg_service: Optional[KnowledgeGraphService] = None):
         self.kb_service = kb_service
         self.pd_model = pd_model
         self.lgd_model = lgd_model
         self.kg_service = kg_service
 
-        # Ensure models are loaded if they are not already trained/in memory
         if self.pd_model.model is None:
             logger.info("PD model not loaded, attempting to load from default path.")
             if not self.pd_model.load_model():
                 logger.warning("PD model could not be loaded. Risk map generation might be impaired or use defaults.")
-                # As a fallback for PoC if model loading fails, we might need to train it here,
-                # or ensure it's trained and saved in a previous step.
-                # For now, we assume it should have been trained/loaded.
-                # Consider: pd_model.train(kb_service) # Potentially train if not loaded.
-
         if self.lgd_model.model is None:
             logger.info("LGD model not loaded, attempting to load from default path.")
             if not self.lgd_model.load_model():
                 logger.warning("LGD model could not be loaded. Risk map generation might be impaired or use defaults.")
-                # Consider: lgd_model.train(kb_service) # Potentially train if not loaded.
+
+    def generate_portfolio_risk_overview(
+        self,
+        industry_sector: Optional[str] = None,
+        country_iso_code: Optional[str] = None,
+        min_loan_amount_usd: Optional[float] = None,
+        max_loan_amount_usd: Optional[float] = None,
+        min_effective_pd_estimate: Optional[float] = None,
+        max_effective_pd_estimate: Optional[float] = None,
+        default_status: Optional[bool] = None,
+        hitl_overall_review_status: Optional[HITLReviewStatus] = None,
+        min_effective_management_quality_score: Optional[int] = None,
+        max_effective_management_quality_score: Optional[int] = None
+    ) -> List[RiskItem]:
+        log_message = "Generating portfolio risk overview"
+        filters_applied = []
+        if industry_sector: filters_applied.append(f"industry_sector='{industry_sector}'")
+        if country_iso_code: filters_applied.append(f"country_iso_code='{country_iso_code}'")
+        if min_loan_amount_usd is not None: filters_applied.append(f"min_loan_amount_usd={min_loan_amount_usd}")
+        if max_loan_amount_usd is not None: filters_applied.append(f"max_loan_amount_usd={max_loan_amount_usd}")
+        if min_effective_pd_estimate is not None: filters_applied.append(f"min_effective_pd_estimate={min_effective_pd_estimate}")
+        if max_effective_pd_estimate is not None: filters_applied.append(f"max_effective_pd_estimate={max_effective_pd_estimate}")
+        if default_status is not None: filters_applied.append(f"default_status={default_status}")
+        if hitl_overall_review_status is not None: filters_applied.append(f"hitl_overall_review_status='{hitl_overall_review_status.value}'")
+        if min_effective_management_quality_score is not None: filters_applied.append(f"min_effective_mqs={min_effective_management_quality_score}")
+        if max_effective_management_quality_score is not None: filters_applied.append(f"max_effective_mqs={max_effective_management_quality_score}")
 
 
-    def generate_portfolio_risk_overview(self) -> List[Dict[str, Any]]:
-        """
-        Generates a risk overview for the entire portfolio available in the Knowledge Base.
-        Each item in the list represents a loan with its associated risk metrics.
-        """
-        logger.info("Generating portfolio risk overview for the risk map...")
-        portfolio_risk_data = []
+        if filters_applied: log_message += " with filters: " + ", ".join(filters_applied)
+        else: log_message += "..."
+        logger.info(log_message)
 
+        portfolio_risk_items: List[RiskItem] = []
         all_loans = self.kb_service.get_all_loans()
         if not all_loans:
-            logger.warning("No loans found in Knowledge Base. Cannot generate risk map data.")
+            logger.warning("No loans found in Knowledge Base.")
             return []
 
         for loan in all_loans:
             company = self.kb_service.get_company_profile(loan.company_id)
             if not company:
-                logger.warning(f"Company {loan.company_id} for loan {loan.loan_id} not found. Skipping loan in risk map.")
+                logger.warning(f"Company {loan.company_id} for loan {loan.loan_id} not found. Skipping.")
                 continue
 
-            # 1. Get PD estimate
-            pd_prediction_class, pd_probability = -1, -1.0 # Default/Error values
+            model_pd: Optional[float] = None
             if self.pd_model.model is not None:
                 pd_result = self.pd_model.predict_for_loan(loan.model_dump(), company.model_dump())
-                if pd_result:
-                    pd_prediction_class, pd_probability = pd_result
-                else:
-                    logger.warning(f"Could not get PD prediction for loan {loan.loan_id}. Using default.")
-                    pd_probability = 0.5 # Default PD if prediction fails
-            else:
-                logger.warning(f"PD model not available for loan {loan.loan_id}. Using default PD.")
-                pd_probability = 0.5 # Default PD
+                if pd_result: _, model_pd = pd_result; model_pd = round(model_pd, 4) if model_pd is not None else None
 
-            # 2. Get LGD estimate
-            lgd_estimate = -1.0 # Default/Error value
+            model_lgd: Optional[float] = None
             if self.lgd_model.model is not None:
-                # LGD model expects a dictionary of features
-                # Align with features expected by the enhanced LGDModel
-                lgd_features = {
-                    'collateral_type': loan.collateral_type.value if loan.collateral_type else 'None',
-                    'loan_amount_usd': loan.loan_amount,
-                    'seniority_of_debt': str(loan.seniority_of_debt) if loan.seniority_of_debt else 'Unknown',
-                    'economic_condition_indicator': loan.economic_condition_indicator if loan.economic_condition_indicator is not None else 0.5
-                }
-                lgd_estimate = self.lgd_model.predict_lgd(lgd_features)
-            else:
-                logger.warning(f"LGD model not available for loan {loan.loan_id}. Using default LGD.")
-                lgd_estimate = 0.75 # Default LGD
+                lgd_features = {'collateral_type': loan.collateral_type.value if loan.collateral_type else 'None', 'loan_amount_usd': loan.loan_amount, 'seniority_of_debt': str(loan.seniority_of_debt) if loan.seniority_of_debt else 'Unknown', 'economic_condition_indicator': loan.economic_condition_indicator if loan.economic_condition_indicator is not None else 0.5}
+                raw_lgd = self.lgd_model.predict_lgd(lgd_features)
+                if raw_lgd is not None: model_lgd = round(raw_lgd, 4)
 
-            # 3. Calculate Expected Loss (EL)
-            ead = loan.loan_amount
-            expected_loss = pd_probability * lgd_estimate * ead if pd_probability >=0 and lgd_estimate >=0 else -1
+            ead_val = loan.loan_amount
+            model_el: Optional[float] = None
+            if model_pd is not None and model_lgd is not None:
+                model_el = round(model_pd * model_lgd * ead_val, 2)
 
-            risk_item = {
-                "loan_id": loan.loan_id,
-                "company_id": company.company_id,
-                "company_name": company.company_name,
-                "industry_sector": company.industry_sector.value if company.industry_sector else 'N/A',
-                "country_iso_code": company.country_iso_code if company.country_iso_code else 'N/A',
-                "management_quality_score": company.management_quality_score if hasattr(company, 'management_quality_score') and company.management_quality_score is not None else 'N/A',
-                "loan_amount_usd": loan.loan_amount,
-                "pd_estimate": round(pd_probability, 4),
-                "lgd_estimate": round(lgd_estimate, 4),
-                "exposure_at_default_usd": ead,
-                "expected_loss_usd": round(expected_loss, 2) if expected_loss >=0 else "N/A",
-                "currency": loan.currency.value,
-                "collateral_type": loan.collateral_type.value if loan.collateral_type else "None",
-                "is_defaulted": loan.default_status,
-                # KG-derived fields (default to N/A)
-                "kg_degree_centrality": "N/A",
-                "kg_num_suppliers": "N/A",
-                "kg_num_customers": "N/A",
-                "kg_num_subsidiaries": "N/A"
-            }
+            effective_pd = model_pd
+            effective_lgd = model_lgd
+            effective_mqs = company.management_quality_score
+            has_pd_override, has_lgd_override, has_mqs_override = False, False, False
 
-            # Add more contextual info from Knowledge Graph if available
+            loan_pd_anno = self.kb_service.get_latest_hitl_annotation_for_field(loan.loan_id, "loan", "pd_estimate")
+            if loan_pd_anno and loan_pd_anno.new_value_numeric is not None:
+                effective_pd = loan_pd_anno.new_value_numeric; has_pd_override = True
+
+            loan_lgd_anno = self.kb_service.get_latest_hitl_annotation_for_field(loan.loan_id, "loan", "lgd_estimate")
+            if loan_lgd_anno and loan_lgd_anno.new_value_numeric is not None:
+                effective_lgd = loan_lgd_anno.new_value_numeric; has_lgd_override = True
+
+            company_mqs_anno = self.kb_service.get_latest_hitl_annotation_for_field(company.company_id, "company", "management_quality_score")
+            if company_mqs_anno and company_mqs_anno.new_value_numeric is not None:
+                effective_mqs = int(company_mqs_anno.new_value_numeric); has_mqs_override = True
+
+            effective_el: Optional[float] = None
+            if effective_pd is not None and effective_lgd is not None:
+                effective_el = round(effective_pd * effective_lgd * ead_val, 2)
+
+            overall_hitl_status_val: Optional[HITLReviewStatus] = None
+            last_hitl_timestamp_val: Optional[datetime.datetime] = None
+            has_notes_val: bool = False
+            latest_loan_overall_anno = self.kb_service.get_latest_hitl_annotation_for_field(loan.loan_id, "loan")
+            latest_comp_overall_anno = self.kb_service.get_latest_hitl_annotation_for_field(company.company_id, "company")
+
+            if latest_loan_overall_anno:
+                overall_hitl_status_val = latest_loan_overall_anno.hitl_review_status
+                last_hitl_timestamp_val = latest_loan_overall_anno.annotation_timestamp
+                if latest_loan_overall_anno.hitl_analyst_notes: has_notes_val = True
+            elif latest_comp_overall_anno:
+                overall_hitl_status_val = latest_comp_overall_anno.hitl_review_status
+                last_hitl_timestamp_val = latest_comp_overall_anno.annotation_timestamp
+                if latest_comp_overall_anno.hitl_analyst_notes: has_notes_val = True
+
+            current_company_industry_sector_val = company.industry_sector.value if company.industry_sector else None
+            if industry_sector and current_company_industry_sector_val != industry_sector: continue
+            if country_iso_code and (not company.country_iso_code or company.country_iso_code.upper() != country_iso_code.upper()): continue
+            if min_loan_amount_usd is not None and loan.loan_amount < min_loan_amount_usd: continue
+            if max_loan_amount_usd is not None and loan.loan_amount > max_loan_amount_usd: continue
+            if default_status is not None and loan.default_status != default_status: continue
+            if min_effective_pd_estimate is not None and (effective_pd is None or effective_pd < min_effective_pd_estimate): continue
+            if max_effective_pd_estimate is not None and (effective_pd is None or effective_pd > max_effective_pd_estimate): continue
+            if hitl_overall_review_status is not None and (overall_hitl_status_val is None or overall_hitl_status_val != hitl_overall_review_status): continue
+            if min_effective_management_quality_score is not None and (effective_mqs is None or effective_mqs < min_effective_management_quality_score): continue
+            if max_effective_management_quality_score is not None and (effective_mqs is None or effective_mqs > max_effective_management_quality_score): continue
+
+            kg_degree_centrality_val, kg_num_suppliers_val, kg_num_customers_val, kg_num_subsidiaries_val = None, None, None, None
             if self.kg_service and self.kg_service.graph.has_node(company.company_id):
                 context_info = self.kg_service.get_company_contextual_info(company.company_id)
                 if context_info:
-                    risk_item["kg_degree_centrality"] = round(context_info.get('degree_centrality', -1.0), 4) if context_info.get('degree_centrality', -1.0) != -1.0 else "N/A"
-                    risk_item["kg_num_suppliers"] = context_info.get('num_suppliers', 'N/A')
-                    risk_item["kg_num_customers"] = context_info.get('num_customers', 'N/A')
-                    risk_item["kg_num_subsidiaries"] = context_info.get('num_subsidiaries', 'N/A')
+                    raw_centrality = context_info.get('degree_centrality')
+                    if raw_centrality is not None: kg_degree_centrality_val = round(raw_centrality, 4)
+                    kg_num_suppliers_val = context_info.get('num_suppliers')
+                    kg_num_customers_val = context_info.get('num_customers')
+                    kg_num_subsidiaries_val = context_info.get('num_subsidiaries')
 
-            portfolio_risk_data.append(risk_item)
+            try:
+                risk_item_obj = RiskItem(
+                    loan_id=loan.loan_id, company_id=company.company_id, company_name=company.company_name,
+                    industry_sector=current_company_industry_sector_val, country_iso_code=company.country_iso_code,
+                    founded_date=company.founded_date, loan_amount_usd=loan.loan_amount, currency=loan.currency.value,
+                    collateral_type=loan.collateral_type.value if loan.collateral_type else None,
+                    collateral_value_usd=loan.collateral_value_usd, is_defaulted=loan.default_status,
+                    origination_date=loan.origination_date, maturity_date=loan.maturity_date,
+                    interest_rate_percentage=loan.interest_rate_percentage, seniority_of_debt=loan.seniority_of_debt,
+                    economic_condition_indicator=loan.economic_condition_indicator,
+                    model_pd_estimate=model_pd, model_lgd_estimate=model_lgd, model_expected_loss_usd=model_el,
+                    effective_pd_estimate=effective_pd, effective_lgd_estimate=effective_lgd, effective_expected_loss_usd=effective_el,
+                    exposure_at_default_usd=ead_val,
+                    original_management_quality_score=company.management_quality_score,
+                    effective_management_quality_score=effective_mqs,
+                    kg_degree_centrality=kg_degree_centrality_val, kg_num_suppliers=kg_num_suppliers_val,
+                    kg_num_customers=kg_num_customers_val, kg_num_subsidiaries=kg_num_subsidiaries_val,
+                    hitl_overall_review_status=overall_hitl_status_val,
+                    hitl_last_annotation_timestamp=last_hitl_timestamp_val,
+                    hitl_has_notes=has_notes_val, hitl_has_pd_override=has_pd_override,
+                    hitl_has_lgd_override=has_lgd_override, hitl_has_mqs_override=has_mqs_override
+                )
+                portfolio_risk_items.append(risk_item_obj)
+            except Exception as e:
+                logger.error(f"Error creating RiskItem for loan {loan.loan_id}: {e}. Skipping.")
+                logger.error(f"Data for failed RiskItem: loan_id={loan.loan_id}, company_id={company.company_id}, effective_pd={effective_pd}, effective_lgd={effective_lgd}")
 
-        logger.info(f"Generated risk overview for {len(portfolio_risk_data)} loans.")
-        return portfolio_risk_data
+        logger.info(f"Generated risk overview for {len(portfolio_risk_items)} loans after filtering.")
+        return portfolio_risk_items
 
-    def get_risk_summary_by_sector(self, portfolio_overview: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Dict[str, Any]]:
-        """
-        Aggregates risk metrics by industry sector.
-        """
-        if portfolio_overview is None:
-            portfolio_overview = self.generate_portfolio_risk_overview()
-
-        sector_summary: Dict[str, Dict[str, Any]] = {}
-
+    def _generate_summary(self, portfolio_overview: List[RiskItem], group_by_field: str) -> Dict[str, Dict[str, Any]]:
+        summary_data: Dict[str, Dict[str, Any]] = {}
         for item in portfolio_overview:
-            sector = item["industry_sector"]
-            if sector not in sector_summary:
-                sector_summary[sector] = {
-                    "total_exposure": 0.0,
-                    "total_expected_loss": 0.0,
-                    "loan_count": 0,
-                    "average_pd": [], # Store individual PDs to average later
-                    "average_lgd": [], # Store individual LGDs to average later
-                    "defaulted_loan_count": 0
+            group_key_val = getattr(item, group_by_field, None)
+            group_key = str(group_key_val) if group_key_val is not None else "N/A"
+            if group_key not in summary_data:
+                summary_data[group_key] = {
+                    "total_exposure": 0.0, "total_expected_loss": 0.0, "loan_count": 0,
+                    "average_pd": [], "average_lgd": [], "defaulted_loan_count": 0,
+                    "override_pd_count": 0, "override_lgd_count": 0, "override_mqs_count": 0
                 }
 
-            current_el = item["expected_loss_usd"] if item["expected_loss_usd"] != "N/A" else 0
+            current_el = item.effective_expected_loss_usd if item.effective_expected_loss_usd is not None else 0.0
+            current_ead = item.exposure_at_default_usd if item.exposure_at_default_usd is not None else 0.0
+            summary_data[group_key]["total_exposure"] += current_ead
+            summary_data[group_key]["total_expected_loss"] += current_el
+            summary_data[group_key]["loan_count"] += 1
+            if item.effective_pd_estimate is not None: summary_data[group_key]["average_pd"].append(item.effective_pd_estimate)
+            if item.effective_lgd_estimate is not None: summary_data[group_key]["average_lgd"].append(item.effective_lgd_estimate)
+            if item.is_defaulted: summary_data[group_key]["defaulted_loan_count"] +=1
+            if item.hitl_has_pd_override: summary_data[group_key]["override_pd_count"] +=1
+            if item.hitl_has_lgd_override: summary_data[group_key]["override_lgd_count"] +=1
+            if item.hitl_has_mqs_override: summary_data[group_key]["override_mqs_count"] +=1
 
-            sector_summary[sector]["total_exposure"] += item["exposure_at_default_usd"]
-            sector_summary[sector]["total_expected_loss"] += current_el
-            sector_summary[sector]["loan_count"] += 1
-            if item["pd_estimate"] >= 0: # Only average valid estimates
-                 sector_summary[sector]["average_pd"].append(item["pd_estimate"])
-            if item["lgd_estimate"] >= 0: # Only average valid estimates
-                sector_summary[sector]["average_lgd"].append(item["lgd_estimate"])
-            if item["is_defaulted"]:
-                sector_summary[sector]["defaulted_loan_count"] +=1
+        for data in summary_data.values():
+            data["average_pd"] = round(sum(data["average_pd"]) / len(data["average_pd"]), 4) if data["average_pd"] else 0.0
+            data["average_lgd"] = round(sum(data["average_lgd"]) / len(data["average_lgd"]), 4) if data["average_lgd"] else 0.0
+            data["total_expected_loss"] = round(data["total_expected_loss"], 2)
+        return summary_data
 
-
-        # Calculate averages
-        for sector, data in sector_summary.items():
-            avg_pd = sum(data["average_pd"]) / len(data["average_pd"]) if data["average_pd"] else 0
-            avg_lgd = sum(data["average_lgd"]) / len(data["average_lgd"]) if data["average_lgd"] else 0
-            sector_summary[sector]["average_pd"] = round(avg_pd, 4)
-            sector_summary[sector]["average_lgd"] = round(avg_lgd, 4)
-            sector_summary[sector]["total_expected_loss"] = round(data["total_expected_loss"], 2)
-
-
+    def get_risk_summary_by_sector(self, portfolio_overview: Optional[List[RiskItem]] = None, **filters) -> Dict[str, Dict[str, Any]]:
+        if portfolio_overview is None:
+            portfolio_overview = self.generate_portfolio_risk_overview(**filters)
+        if not portfolio_overview:
+            logger.warning("Portfolio overview is empty for sector summary. Applied filters might be too restrictive.")
+            return {}
+        sector_summary = self._generate_summary(portfolio_overview, group_by_field="industry_sector")
         logger.info(f"Generated risk summary for {len(sector_summary)} sectors.")
         return sector_summary
 
-    def get_risk_summary_by_country(self, portfolio_overview: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Dict[str, Any]]:
-        """
-        Aggregates risk metrics by country.
-        """
+    def get_risk_summary_by_country(self, portfolio_overview: Optional[List[RiskItem]] = None, **filters) -> Dict[str, Dict[str, Any]]:
         if portfolio_overview is None:
-            portfolio_overview = self.generate_portfolio_risk_overview()
-
-        country_summary: Dict[str, Dict[str, Any]] = {}
-
-        for item in portfolio_overview:
-            country_code = item.get("country_iso_code", "Unknown") # Use .get() for safety
-            if country_code not in country_summary:
-                country_summary[country_code] = {
-                    "total_exposure": 0.0,
-                    "total_expected_loss": 0.0,
-                    "loan_count": 0,
-                    "average_pd": [],
-                    "average_lgd": [],
-                    "defaulted_loan_count": 0
-                }
-
-            current_el = item["expected_loss_usd"] if item["expected_loss_usd"] != "N/A" else 0
-
-            country_summary[country_code]["total_exposure"] += item["exposure_at_default_usd"]
-            country_summary[country_code]["total_expected_loss"] += current_el
-            country_summary[country_code]["loan_count"] += 1
-            if item["pd_estimate"] >= 0:
-                 country_summary[country_code]["average_pd"].append(item["pd_estimate"])
-            if item["lgd_estimate"] >= 0:
-                country_summary[country_code]["average_lgd"].append(item["lgd_estimate"])
-            if item["is_defaulted"]:
-                country_summary[country_code]["defaulted_loan_count"] +=1
-
-        # Calculate averages
-        for country_code, data in country_summary.items():
-            avg_pd = sum(data["average_pd"]) / len(data["average_pd"]) if data["average_pd"] else 0
-            avg_lgd = sum(data["average_lgd"]) / len(data["average_lgd"]) if data["average_lgd"] else 0
-            country_summary[country_code]["average_pd"] = round(avg_pd, 4)
-            country_summary[country_code]["average_lgd"] = round(avg_lgd, 4)
-            country_summary[country_code]["total_expected_loss"] = round(data["total_expected_loss"], 2)
-
+            portfolio_overview = self.generate_portfolio_risk_overview(**filters)
+        if not portfolio_overview:
+            logger.warning("Portfolio overview is empty for country summary. Applied filters might be too restrictive.")
+            return {}
+        country_summary = self._generate_summary(portfolio_overview, group_by_field="country_iso_code")
         logger.info(f"Generated risk summary for {len(country_summary)} countries.")
         return country_summary
 
+    def get_risk_summary_by_dimensions(self, dimensions: List[str], portfolio_overview: Optional[List[RiskItem]] = None, **filters) -> Dict[Any, Dict[str, Any]]:
+        if not dimensions:
+            logger.warning("No dimensions provided for summary.")
+            return {}
+        if portfolio_overview is None:
+            portfolio_overview = self.generate_portfolio_risk_overview(**filters)
+        if not portfolio_overview:
+            logger.warning("Portfolio overview is empty for dimensional summary. Applied filters might be too restrictive.")
+            return {}
+
+        if len(dimensions) > 1: # Create a composite key for multi-dimensional grouping
+            def composite_key_func(item):
+                return tuple(str(getattr(item, dim, "N/A")) for dim in dimensions)
+
+            summary_data: Dict[tuple, Dict[str, Any]] = {}
+            for item in portfolio_overview:
+                group_key = composite_key_func(item)
+                if group_key not in summary_data:
+                    summary_data[group_key] = {
+                        "total_exposure": 0.0, "total_expected_loss": 0.0, "loan_count": 0,
+                        "average_pd": [], "average_lgd": [], "defaulted_loan_count": 0,
+                        "override_pd_count": 0, "override_lgd_count": 0, "override_mqs_count": 0
+                    }
+                current_el = item.effective_expected_loss_usd if item.effective_expected_loss_usd is not None else 0.0
+                current_ead = item.exposure_at_default_usd if item.exposure_at_default_usd is not None else 0.0
+                summary_data[group_key]["total_exposure"] += current_ead
+                summary_data[group_key]["total_expected_loss"] += current_el
+                summary_data[group_key]["loan_count"] += 1
+                if item.effective_pd_estimate is not None: summary_data[group_key]["average_pd"].append(item.effective_pd_estimate)
+                if item.effective_lgd_estimate is not None: summary_data[group_key]["average_lgd"].append(item.effective_lgd_estimate)
+                if item.is_defaulted: summary_data[group_key]["defaulted_loan_count"] +=1
+                if item.hitl_has_pd_override: summary_data[group_key]["override_pd_count"] +=1
+                if item.hitl_has_lgd_override: summary_data[group_key]["override_lgd_count"] +=1
+                if item.hitl_has_mqs_override: summary_data[group_key]["override_mqs_count"] +=1
+
+            for data_val in summary_data.values(): # Renamed to avoid conflict
+                data_val["average_pd"] = round(sum(data_val["average_pd"]) / len(data_val["average_pd"]), 4) if data_val["average_pd"] else 0.0
+                data_val["average_lgd"] = round(sum(data_val["average_lgd"]) / len(data_val["average_lgd"]), 4) if data_val["average_lgd"] else 0.0
+                data_val["total_expected_loss"] = round(data_val["total_expected_loss"], 2)
+            logger.info(f"Generated multi-dimensional risk summary by {dimensions} for {len(summary_data)} groups.")
+            return summary_data
+        else: # Single dimension
+            group_by_field = dimensions[0]
+            if not hasattr(RiskItem, group_by_field): # Basic check if field exists
+                 logger.error(f"Invalid dimension for summary: {group_by_field}")
+                 return {}
+            summary = self._generate_summary(portfolio_overview, group_by_field=group_by_field)
+            logger.info(f"Generated risk summary by {group_by_field} for {len(summary)} groups.")
+            return summary
+
 
 if __name__ == "__main__":
-    # Setup for standalone testing
     if not logging.getLogger().hasHandlers():
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    logger.info("--- Testing RiskMapService ---")
-
-    # Initialize services (this assumes models are already trained and saved)
-    kb = KnowledgeBaseService() # Loads sample data
-
-    # Ensure models are trained before testing RiskMapService if they aren't saved
-    # For PoC, we assume they were trained if __main__ of model scripts were run
+    logger.info("--- Testing RiskMapService (Extended HITL & Filtering) ---")
+    kb = KnowledgeBaseService() # This will load sample_hitl_annotations.json
     pd_m = PDModel()
     lgd_m = LGDModel()
 
-    # Attempt to load models. If they don't exist, they need to be trained first.
-    # This is a common pattern: try to load, if fails, then train.
     if not pd_m.load_model():
         logger.warning("PD model file not found. Training PD model for RiskMapService test...")
-        if kb.get_all_loans() and kb.get_all_companies(): # Check if data is available
-             pd_train_metrics = pd_m.train(kb_service=kb)
-             logger.info(f"PD Model trained with metrics: {pd_train_metrics}")
-             if "error" in pd_train_metrics:
-                 logger.error("Failed to train PD model. RiskMapService tests may be incomplete.")
-        else:
-            logger.error("Cannot train PD model: No data in KB.")
-
-
+        if kb.get_all_loans() and kb.get_all_companies(): pd_m.train(kb_service=kb)
+        else: logger.error("Cannot train PD model: No data in KB.")
     if not lgd_m.load_model():
         logger.warning("LGD model file not found. Training LGD model for RiskMapService test...")
-        if kb.get_all_loans(): # Check if data is available
-            lgd_train_metrics = lgd_m.train(kb_service=kb)
-            logger.info(f"LGD Model trained with metrics: {lgd_train_metrics}")
-            if "error" in lgd_train_metrics:
-                 logger.error("Failed to train LGD model. RiskMapService tests may be incomplete.")
-        else:
-             logger.error("Cannot train LGD model: No data in KB.")
+        if kb.get_all_loans(): lgd_m.train(kb_service=kb)
+        else: logger.error("Cannot train LGD model: No data in KB.")
 
-
-    # Initialize RiskMapService
-    # Check if models were successfully loaded/trained before passing them
-    if pd_m.model is None:
-        logger.error("PD model is not available (failed to load/train). RiskMapService cannot function correctly.")
-    if lgd_m.model is None:
-        logger.error("LGD model is not available (failed to load/train). RiskMapService cannot function correctly.")
-
-    # Proceed only if models are available
     if pd_m.model and lgd_m.model:
-        # Initialize KnowledgeGraphService
-        logger.info("Initializing KnowledgeGraphService for RiskMapService test...")
         kg_service = KnowledgeGraphService(kb_service=kb)
-        # kg_service._populate_graph_from_kb() # Already called in KG __init__ if kb_service is provided
-
         risk_map_service = RiskMapService(kb_service=kb, pd_model=pd_m, lgd_model=lgd_m, kg_service=kg_service)
 
-        # Generate portfolio overview
-        portfolio_data = risk_map_service.generate_portfolio_risk_overview()
-        if portfolio_data:
-            logger.info(f"Generated {len(portfolio_data)} items for portfolio risk overview.")
-            logger.info("First item in portfolio overview:")
-            import json # Import json for pretty printing
-            logger.info(json.dumps(portfolio_data[0], indent=2))
-        else:
-            logger.warning("Portfolio risk overview is empty.")
+        logger.info("\n--- Full Portfolio Overview (First 2 items) ---")
+        portfolio_all = risk_map_service.generate_portfolio_risk_overview()
+        logger.info(f"Total items in full overview: {len(portfolio_all)}")
+        for i, item in enumerate(portfolio_all[:2]):
+            logger.info(f"Item {i+1}: {item.model_dump_json(indent=2, exclude_none=True)}")
 
-        # Generate summary by sector
-        sector_summary_data = risk_map_service.get_risk_summary_by_sector(portfolio_overview=portfolio_data)
-        if sector_summary_data:
-            logger.info("Generated risk summary by sector:")
-            logger.info(json.dumps(sector_summary_data, indent=2))
-        else:
-            logger.warning("Sector summary is empty.")
+        logger.info("\n--- Filtered: Technology Sector ---")
+        portfolio_tech = risk_map_service.generate_portfolio_risk_overview(industry_sector="Technology")
+        logger.info(f"Tech items: {len(portfolio_tech)}. First if available: {portfolio_tech[0].loan_id if portfolio_tech else 'None'}")
 
-        # Generate summary by country
-        country_summary_data = risk_map_service.get_risk_summary_by_country(portfolio_overview=portfolio_data)
-        if country_summary_data:
-            logger.info("Generated risk summary by country:")
-            logger.info(json.dumps(country_summary_data, indent=2))
-        else:
-            logger.warning("Country summary is empty.")
+        logger.info("\n--- Filtered: Effective PD > 0.07 ---")
+        # Note: sample_hitl_annotations.json has LOAN7002 with PD override to 0.085
+        # Original PD for LOAN7002 might be different based on model training.
+        portfolio_pd_filtered = risk_map_service.generate_portfolio_risk_overview(min_effective_pd_estimate=0.07)
+        logger.info(f"Items with Effective PD > 0.07: {len(portfolio_pd_filtered)}")
+        for item in portfolio_pd_filtered:
+            logger.info(f"  Loan: {item.loan_id}, EffectivePD: {item.effective_pd_estimate}, Override: {item.hitl_has_pd_override}, ModelPD: {item.model_pd_estimate}")
+
+        logger.info("\n--- Filtered: HITL Status - FLAGGED_MODEL_DISAGREEMENT ---")
+        # sample_hitl_annotations.json has LOAN7002 as FLAGGED_MODEL_DISAGREEMENT
+        portfolio_hitl_flagged = risk_map_service.generate_portfolio_risk_overview(
+            hitl_overall_review_status=HITLReviewStatus.FLAGGED_MODEL_DISAGREEMENT
+        )
+        logger.info(f"Items with HITL Status FLAGGED_MODEL_DISAGREEMENT: {len(portfolio_hitl_flagged)}")
+        if portfolio_hitl_flagged:
+             logger.info(f"  First flagged item loan_id: {portfolio_hitl_flagged[0].loan_id}")
+
+        logger.info("\n--- Filtered: Effective MQS < 7 ---")
+        # COMP003 has original MQS 5 in sample_companies.csv. No override in sample_hitl_annotations.json
+        portfolio_mqs_filtered = risk_map_service.generate_portfolio_risk_overview(max_effective_management_quality_score=6)
+        logger.info(f"Items with Effective MQS < 7: {len(portfolio_mqs_filtered)}")
+        for item in portfolio_mqs_filtered:
+             logger.info(f"  Loan: {item.loan_id}, Company: {item.company_id}, EffectiveMQS: {item.effective_management_quality_score}, Override: {item.hitl_has_mqs_override}")
+
+        logger.info("\n--- Summary by Sector (on full portfolio) ---")
+        sector_summary = risk_map_service.get_risk_summary_by_sector(portfolio_overview=portfolio_all)
+        logger.info(json.dumps(sector_summary, indent=2, default=str))
+
+        logger.info("\n--- Summary by Country (filtered for Technology) ---")
+        country_summary_tech = risk_map_service.get_risk_summary_by_country(portfolio_overview=portfolio_tech)
+        logger.info(json.dumps(country_summary_tech, indent=2, default=str))
+
+        logger.info("\n--- Summary by 'is_defaulted' (generic dimensions) ---")
+        default_summary = risk_map_service.get_risk_summary_by_dimensions(dimensions=["is_defaulted"], portfolio_overview=portfolio_all)
+        logger.info(json.dumps(default_summary, indent=2, default=str))
+
+        logger.info("\n--- Summary by 'industry_sector' and 'is_defaulted' (generic dimensions) ---")
+        multi_dim_summary = risk_map_service.get_risk_summary_by_dimensions(
+            dimensions=["industry_sector", "is_defaulted"],
+            portfolio_overview=portfolio_all
+        )
+        # Convert tuple keys to strings for JSON serialization if pretty printing
+        # logger.info(json.dumps({str(k): v for k, v in multi_dim_summary.items()}, indent=2, default=str))
+        logger.info(f"Multi-dim summary groups: {len(multi_dim_summary)}")
+
+
     else:
         logger.error("RiskMapService could not be initialized due to missing models. Tests aborted.")
