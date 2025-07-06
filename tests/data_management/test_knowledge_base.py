@@ -9,7 +9,7 @@ import io # Added for StringIO
 from src.data_management.knowledge_base import KnowledgeBaseService
 from src.data_management.ontology import (
     CorporateEntity, LoanAgreement, FinancialStatement, DefaultEvent,
-    IndustrySector, Currency, CollateralType # Removed SeniorityOfDebt and DefaultType
+    IndustrySector, Currency, CollateralType, HITLAnnotation # Added HITLAnnotation
 )
 
 class TestKnowledgeBaseService(unittest.TestCase):
@@ -60,34 +60,38 @@ class TestKnowledgeBaseService(unittest.TestCase):
             "amount_at_default": 45000
         }
     ])
+    sample_hitl_annotations_json_content = json.dumps([
+        {
+            "entity_id": "C1", "annotation_type": "company", "hitl_management_quality_score": 9,
+            "hitl_review_status": "Reviewed - OK", "annotator_id": "analyst_test",
+            "annotation_timestamp": "2023-01-01T10:00:00"
+        },
+        {
+            "entity_id": "L2", "annotation_type": "loan", "hitl_pd_override": 0.75,
+            "hitl_review_status": "Flagged - Needs Attention", "hitl_analyst_notes": "Concern about recovery.",
+            "annotation_timestamp": "2023-01-02T12:00:00"
+        }
+    ])
 
-    @patch('pandas.read_csv') # as mock_pd_read_csv_in_setup
-    @patch('builtins.open', new_callable=mock_open) # as mock_file_open_in_setup
-    def setUp(self, mock_open_method_for_setup, mock_read_csv_method_for_setup): # Corrected arg names to match decorator order
-        # Create the DataFrame that the mocked pd.read_csv will return
+    @patch('pandas.read_csv')
+    @patch('builtins.open', new_callable=mock_open)
+    def setUp(self, mock_file_open, mock_pd_read_csv):
         self.mocked_companies_df = pd.read_csv(io.StringIO(self.sample_companies_csv_content))
-        assert not self.mocked_companies_df.empty, "Mocked companies DataFrame is empty in setUp!" # Debug assertion
-        mock_read_csv_method_for_setup.return_value = self.mocked_companies_df
+        mock_pd_read_csv.return_value = self.mocked_companies_df
 
-        # This side_effect is for self.kb_service used by most tests
-        def global_side_effect_open(file_path_str, mode='r'):
+        def side_effect_open(file_path_str, mode='r'):
             file_path_name = Path(file_path_str).name
             if file_path_name == "sample_loans.json":
-                # mock_open() returns the mock file handle
                 return mock_open(read_data=self.sample_loans_json_content)()
             elif file_path_name == "sample_financial_statements.json":
                 return mock_open(read_data=self.sample_fs_json_content)()
             elif file_path_name == "sample_default_events.json":
                 return mock_open(read_data=self.sample_de_json_content)()
-            # pd.read_csv is mocked separately, so open shouldn't be called for sample_companies.csv by KnowledgeBaseService
-            # However, if a test *directly* tried to open it via builtins.open, this could handle it:
+            elif file_path_name == "sample_hitl_annotations.json": # Handle new file
+                return mock_open(read_data=self.sample_hitl_annotations_json_content)()
             elif file_path_name == "sample_companies.csv":
-                 # This case should ideally not be reached if pd.read_csv is properly mocked for company data
-                 return mock_open(read_data=self.sample_companies_csv_content)()
-            # Fallback for any other unexpected file open attempts through the mock
-            # print(f"Warning: Unexpected file opened in global setUp mock: {file_path_str}")
-            mf = mock_open(read_data="{}") # Default empty JSON for other unexpected calls
-            return mf()
+                 return mock_open(read_data=self.sample_companies_csv_content)() # Should not be called by KBService directly
+            return mock_open(read_data="[]")() # Default empty JSON list for other unexpected calls
 
 
         # unittest.mock.mock_open is the callable, the argument mock_open_method_for_setup is the instance of the mock for 'open'
@@ -304,6 +308,74 @@ class TestKnowledgeBaseService(unittest.TestCase):
         self.assertEqual(len(kb_service_test.get_all_companies()), 3)
         self.assertTrue(len(kb_service_test._financial_statements_data) > 0)
         self.assertTrue(len(kb_service_test._default_events_data) > 0)
+
+    def test_load_data_hitl_annotations(self):
+        """Test that HITL annotation data is loaded and parsed correctly."""
+        self.assertIsNotNone(self.kb_service._hitl_annotations_data)
+        self.assertEqual(len(self.kb_service._hitl_annotations_data), 2)
+
+        # Check C1 company annotation
+        c1_annotation_key = "company:C1"
+        self.assertIn(c1_annotation_key, self.kb_service._hitl_annotations_data)
+        c1_hitl = self.kb_service._hitl_annotations_data[c1_annotation_key]
+        self.assertIsInstance(c1_hitl, HITLAnnotation)
+        self.assertEqual(c1_hitl.entity_id, "C1")
+        self.assertEqual(c1_hitl.annotation_type, "company")
+        self.assertEqual(c1_hitl.hitl_management_quality_score, 9)
+        self.assertEqual(c1_hitl.hitl_review_status, "Reviewed - OK")
+        self.assertEqual(c1_hitl.annotator_id, "analyst_test")
+        self.assertEqual(c1_hitl.annotation_timestamp, datetime.datetime(2023, 1, 1, 10, 0, 0))
+
+
+        # Check L2 loan annotation
+        l2_annotation_key = "loan:L2"
+        self.assertIn(l2_annotation_key, self.kb_service._hitl_annotations_data)
+        l2_hitl = self.kb_service._hitl_annotations_data[l2_annotation_key]
+        self.assertEqual(l2_hitl.entity_id, "L2")
+        self.assertEqual(l2_hitl.annotation_type, "loan")
+        self.assertEqual(l2_hitl.hitl_pd_override, 0.75)
+        self.assertEqual(l2_hitl.hitl_review_status, "Flagged - Needs Attention")
+        self.assertEqual(l2_hitl.hitl_analyst_notes, "Concern about recovery.")
+
+    def test_get_hitl_annotation(self):
+        """Test retrieving HITL annotations."""
+        # Test existing company annotation
+        c1_hitl = self.kb_service.get_hitl_annotation(entity_id="C1", annotation_type="company")
+        self.assertIsNotNone(c1_hitl)
+        self.assertEqual(c1_hitl.hitl_management_quality_score, 9)
+
+        # Test existing loan annotation
+        l2_hitl = self.kb_service.get_hitl_annotation(entity_id="L2", annotation_type="loan")
+        self.assertIsNotNone(l2_hitl)
+        self.assertEqual(l2_hitl.hitl_pd_override, 0.75)
+
+        # Test non-existent annotation
+        non_existent_hitl = self.kb_service.get_hitl_annotation(entity_id="NON_EXISTENT", annotation_type="company")
+        self.assertIsNone(non_existent_hitl)
+
+        non_existent_type_hitl = self.kb_service.get_hitl_annotation(entity_id="C1", annotation_type="unknown_type")
+        self.assertIsNone(non_existent_type_hitl)
+
+    def test_load_data_hitl_file_not_found(self):
+        """Test handling when HITL annotations file is not found."""
+        mock_csv_df = pd.read_csv(io.StringIO(self.sample_companies_csv_content))
+        def open_side_effect_hitl_missing(file_path_str, mode='r'):
+            file_path = Path(file_path_str)
+            if file_path.name == "sample_hitl_annotations.json":
+                raise FileNotFoundError("Mocked: HITL file not found")
+            # Provide valid data for other files
+            elif file_path.name == "sample_loans.json": return mock_open(read_data=self.sample_loans_json_content)()
+            elif file_path.name == "sample_financial_statements.json": return mock_open(read_data=self.sample_fs_json_content)()
+            elif file_path.name == "sample_default_events.json": return mock_open(read_data=self.sample_de_json_content)()
+            return mock_open(read_data="[]")()
+
+        with patch('pandas.read_csv', return_value=mock_csv_df), \
+             patch('builtins.open', side_effect=open_side_effect_hitl_missing):
+            kb_service_test_hitl_missing = KnowledgeBaseService(
+                hitl_annotations_path=Path("data/sample_hitl_annotations.json") # Path that will raise FileNotFoundError
+            )
+        self.assertIsNotNone(kb_service_test_hitl_missing._hitl_annotations_data)
+        self.assertEqual(len(kb_service_test_hitl_missing._hitl_annotations_data), 0)
 
 
 if __name__ == '__main__':
