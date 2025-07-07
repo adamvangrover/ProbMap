@@ -7,6 +7,7 @@ from src.risk_models.pd_model import PDModel
 from src.risk_models.lgd_model import LGDModel
 from src.data_management.knowledge_graph import KnowledgeGraphService
 import datetime # Ensure datetime is imported
+
 import json # For pretty printing in __main__
 
 logger = logging.getLogger(__name__)
@@ -117,11 +118,13 @@ class RiskMapService:
             latest_comp_overall_anno = self.kb_service.get_latest_hitl_annotation_for_field(company.company_id, "company")
 
             # Prioritize loan-specific annotation for overall status and timestamp
+
             if latest_loan_overall_anno:
                 overall_hitl_status_val = latest_loan_overall_anno.hitl_review_status
                 last_hitl_timestamp_val = latest_loan_overall_anno.annotation_timestamp
                 if latest_loan_overall_anno.hitl_analyst_notes: has_notes_val = True
             elif latest_comp_overall_anno: # Fallback to company annotation
+
                 overall_hitl_status_val = latest_comp_overall_anno.hitl_review_status
                 last_hitl_timestamp_val = latest_comp_overall_anno.annotation_timestamp
                 if latest_comp_overall_anno.hitl_analyst_notes: has_notes_val = True
@@ -203,6 +206,7 @@ class RiskMapService:
             if item.hitl_has_mqs_override: summary_data[group_key]["override_mqs_count"] +=1
 
         for data in summary_data.values(): # Renamed to avoid conflict with outer 'data'
+
             data["average_pd"] = round(sum(data["average_pd"]) / len(data["average_pd"]), 4) if data["average_pd"] else 0.0
             data["average_lgd"] = round(sum(data["average_lgd"]) / len(data["average_lgd"]), 4) if data["average_lgd"] else 0.0
             data["total_expected_loss"] = round(data["total_expected_loss"], 2)
@@ -247,6 +251,7 @@ class RiskMapService:
                 group_key = composite_key_func(item)
                 if group_key not in summary_data_multi:
                     summary_data_multi[group_key] = {
+
                         "total_exposure": 0.0, "total_expected_loss": 0.0, "loan_count": 0,
                         "average_pd": [], "average_lgd": [], "defaulted_loan_count": 0,
                         "override_pd_count": 0, "override_lgd_count": 0, "override_mqs_count": 0
@@ -273,6 +278,7 @@ class RiskMapService:
             group_by_field = dimensions[0]
             # Basic check if field exists using RiskItem.model_fields
             if group_by_field not in RiskItem.model_fields:
+
                  logger.error(f"Invalid dimension for summary: {group_by_field}")
                  return {}
             summary = self._generate_summary(portfolio_overview, group_by_field=group_by_field)
@@ -286,6 +292,7 @@ if __name__ == "__main__":
 
     logger.info("--- Testing RiskMapService (Extended HITL & Filtering) ---")
     kb = KnowledgeBaseService()
+
     pd_m = PDModel()
     lgd_m = LGDModel()
 
@@ -308,6 +315,7 @@ if __name__ == "__main__":
         if portfolio_all:
             logger.info(f"First Item: {portfolio_all[0].model_dump_json(indent=2, exclude_none=True)}")
 
+
         logger.info("\n--- Filtered: Technology Sector ---")
         portfolio_tech = risk_map_service.generate_portfolio_risk_overview(industry_sector="Technology")
         logger.info(f"Tech items: {len(portfolio_tech)}. First if available: {portfolio_tech[0].loan_id if portfolio_tech else 'None'}")
@@ -320,6 +328,7 @@ if __name__ == "__main__":
                  logger.info(f"  Loan: {item.loan_id}, Company: {item.company_id}, ModelPD: {item.model_pd_estimate}, EffectivePD: {item.effective_pd_estimate}, Override: {item.hitl_has_pd_override}")
 
         logger.info("\n--- Filtered: HITL Status - FLAGGED_MODEL_DISAGREEMENT ---")
+
         portfolio_hitl_flagged = risk_map_service.generate_portfolio_risk_overview(
             hitl_overall_review_status=HITLReviewStatus.FLAGGED_MODEL_DISAGREEMENT
         )
@@ -354,6 +363,7 @@ if __name__ == "__main__":
         # Example of accessing a multi-dim key if needed for print:
         # for k, v in multi_dim_summary.items():
         #     logger.info(f"Group {str(k)}: {v['loan_count']} loans")
+
 
 
     else:
