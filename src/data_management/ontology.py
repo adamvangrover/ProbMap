@@ -137,6 +137,177 @@ class DefaultEvent(BaseModel):
     recovery_amount_usd: Optional[float] = None
     loss_given_default_actual: Optional[float] = Field(None, description="Actual LGD, calculated as (EAD - Recovery) / EAD if applicable")
 
+
+class RiskItem(BaseModel):
+    """
+    Represents a single item in the risk probability map, typically a loan,
+    augmented with company information, risk scores, and other relevant metrics.
+    """
+    # Identifiers
+    loan_id: str
+    company_id: str
+
+    # Company Information
+    company_name: str
+    industry_sector: Optional[str] = None # Using str representation of IndustrySector enum for flexibility
+    country_iso_code: Optional[str] = None
+
+    # Loan Information
+    loan_amount_usd: float
+    currency: str # Using str representation of Currency enum
+    collateral_type: Optional[str] = None # Using str representation of CollateralType enum
+    is_defaulted: bool
+    origination_date: Optional[datetime.date] = None
+    maturity_date: Optional[datetime.date] = None
+
+
+    # Core Risk Metrics
+    pd_estimate: Optional[float] = None
+    lgd_estimate: Optional[float] = None
+    exposure_at_default_usd: Optional[float] = None # Typically loan_amount for this PoC
+    expected_loss_usd: Optional[float] = None
+
+    # Qualitative Scores (Original and HITL-augmented)
+    management_quality_score: Optional[int] = None # Original score from data
+    hitl_management_quality_score: Optional[int] = None # Score after potential HITL review/override
+
+    # KG-Derived Metrics
+    kg_degree_centrality: Optional[float] = None
+    kg_num_suppliers: Optional[int] = None
+    kg_num_customers: Optional[int] = None
+    kg_num_subsidiaries: Optional[int] = None
+
+    # HITL Annotations
+    hitl_review_status: Optional[str] = None # e.g., "Pending Review", "Reviewed", "Flagged"
+    hitl_analyst_notes: Optional[str] = None # Textual notes from an analyst
+    hitl_pd_override: Optional[float] = None # Analyst overridden PD
+    hitl_lgd_override: Optional[float] = None # Analyst overridden LGD
+
+    # Timestamps / Versioning
+    data_as_of_date: Optional[datetime.date] = Field(default_factory=datetime.date.today)
+    risk_calculation_timestamp: Optional[datetime.datetime] = Field(default_factory=datetime.datetime.now)
+
+    model_config = {
+        "validate_assignment": True,
+        "extra": "forbid"
+    }
+
+
+class HITLReviewStatus(str, Enum):
+    PENDING_REVIEW = "Pending Analyst Review"
+    REVIEWED_OK = "Reviewed - OK"
+    FLAGGED_ATTENTION = "Flagged - Needs Attention"
+    FLAGGED_MODEL_DISAGREEMENT = "Flagged - Model Disagreement"
+    OVERRIDDEN = "Overridden by Analyst"
+
+class HITLAnnotation(BaseModel):
+    """
+    Represents Human-in-the-Loop annotations for a specific entity (e.g., company or loan).
+    Using entity_id to be generic, can be company_id or loan_id based on context.
+    Multiple annotations can exist for the same entity (e.g., from different analysts or at different times).
+    """
+    annotation_id: str = Field(default_factory=lambda: f"hitl_anno_{datetime.datetime.now().timestamp()}_{hash(str(datetime.datetime.now()))}", description="Unique identifier for the annotation itself")
+    entity_id: str = Field(..., description="Identifier for the entity being annotated (e.g., company_id or loan_id)")
+    annotation_target_field: Optional[str] = Field(None, description="Specific field being annotated/overridden, e.g., 'pd_estimate', 'management_quality_score'")
+    annotation_type: str = Field(..., description="Type of entity being annotated, e.g., 'company', 'loan', 'risk_item_summary'")
+
+    # Specific HITL fields - these are now more generic, specific values stored in `new_value` or `notes`
+    hitl_review_status: Optional[HITLReviewStatus] = Field(None, description="Review status set by analyst")
+    hitl_analyst_notes: Optional[str] = Field(None, description="Textual notes or justifications from the analyst")
+
+    # Fields for overrides or suggested values
+    previous_value_numeric: Optional[float] = Field(None, description="Previous numeric value of the target field, if applicable")
+    new_value_numeric: Optional[float] = Field(None, description="New numeric value suggested/overridden by analyst")
+    previous_value_str: Optional[str] = Field(None, description="Previous string value of the target field, if applicable")
+    new_value_str: Optional[str] = Field(None, description="New string value suggested/overridden by analyst")
+
+    override_confidence: Optional[float] = Field(None, ge=0, le=1, description="Analyst's confidence in the override (0-1)")
+    reason_code: Optional[str] = Field(None, description="Predefined reason code for the annotation or override")
+
+    # Metadata for the annotation itself
+    annotator_id: Optional[str] = Field(None, description="Identifier of the analyst who made the annotation")
+    annotation_timestamp: datetime.datetime = Field(default_factory=datetime.datetime.now, description="Timestamp of when the annotation was last made/updated")
+    version: int = Field(1, description="Version of this annotation for the entity_id/target_field, if multiple edits occur")
+
+    model_config = {
+        "validate_assignment": True,
+        "extra": "forbid"
+    }
+
+# Update RiskItem to use the new HITLReviewStatus and reflect more detailed HITL integration
+class RiskItem(BaseModel):
+    """
+    Represents a single item in the risk probability map, typically a loan,
+    augmented with company information, risk scores, and other relevant metrics.
+    """
+    # Identifiers
+    loan_id: str
+    company_id: str
+
+    # Company Information
+    company_name: str
+    industry_sector: Optional[str] = None
+    country_iso_code: Optional[str] = None
+    founded_date: Optional[datetime.date] = None # Added from CorporateEntity
+
+    # Loan Information
+    loan_amount_usd: float
+    currency: str
+    collateral_type: Optional[str] = None
+    collateral_value_usd: Optional[float] = None # Added from LoanAgreement
+    is_defaulted: bool
+    origination_date: Optional[datetime.date] = None
+    maturity_date: Optional[datetime.date] = None
+    interest_rate_percentage: Optional[float] = None # Added from LoanAgreement
+    seniority_of_debt: Optional[str] = None # Added from LoanAgreement
+    economic_condition_indicator: Optional[float] = None # Added from LoanAgreement
+
+
+    # Core Risk Metrics
+    model_pd_estimate: Optional[float] = Field(None, description="PD estimate from the model")
+    model_lgd_estimate: Optional[float] = Field(None, description="LGD estimate from the model")
+    model_expected_loss_usd: Optional[float] = Field(None, description="EL calculated from model PD & LGD")
+
+    # Effective Risk Metrics (after potential HITL overrides)
+    effective_pd_estimate: Optional[float] = Field(None, description="Effective PD estimate (model or HITL override)")
+    effective_lgd_estimate: Optional[float] = Field(None, description="Effective LGD estimate (model or HITL override)")
+    effective_expected_loss_usd: Optional[float] = Field(None, description="EL calculated from effective PD & LGD")
+
+    exposure_at_default_usd: Optional[float] = None
+
+    # Qualitative Scores
+    original_management_quality_score: Optional[int] = Field(None, description="Original management quality score from data source")
+    effective_management_quality_score: Optional[int] = Field(None, description="Effective MQS (original or HITL override)")
+
+    # KG-Derived Metrics
+    kg_degree_centrality: Optional[float] = None
+    kg_num_suppliers: Optional[int] = None
+    kg_num_customers: Optional[int] = None
+    kg_num_subsidiaries: Optional[int] = None
+
+    # HITL Summary/Status fields directly on RiskItem for convenience
+    hitl_overall_review_status: Optional[HITLReviewStatus] = Field(None, description="Overall review status based on latest HITLAnnotation for this loan/company")
+    hitl_last_annotation_timestamp: Optional[datetime.datetime] = Field(None, description="Timestamp of the most recent HITL annotation relevant to this item")
+    hitl_has_notes: bool = Field(False, description="True if there are any analyst notes")
+    hitl_has_pd_override: bool = Field(False, description="True if PD has been overridden by an analyst")
+    hitl_has_lgd_override: bool = Field(False, description="True if LGD has been overridden by an analyst")
+    hitl_has_mqs_override: bool = Field(False, description="True if MQS has been overridden by an analyst")
+
+
+    # Trend Indicators / Peer Comparisons (Conceptual placeholders)
+    pd_trend_3m: Optional[str] = Field(None, description="3-month trend of PD (e.g., 'UP', 'DOWN', 'STABLE')")
+    el_peer_percentile: Optional[float] = Field(None, ge=0, le=100, description="Percentile of this item's EL compared to industry peers")
+
+    # Timestamps / Versioning
+    data_as_of_date: Optional[datetime.date] = Field(default_factory=datetime.date.today)
+    risk_calculation_timestamp: Optional[datetime.datetime] = Field(default_factory=datetime.datetime.now)
+
+    model_config = {
+        "validate_assignment": True,
+        "extra": "forbid"
+    }
+
+
 if __name__ == "__main__":
     # Example Usage
     sample_company = CorporateEntity(
