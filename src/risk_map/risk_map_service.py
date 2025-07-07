@@ -2,11 +2,12 @@ import logging
 from typing import List, Dict, Any, Optional
 
 from src.data_management.knowledge_base import KnowledgeBaseService
-from src.data_management.ontology import LoanAgreement, CorporateEntity, RiskItem, HITLAnnotation, HITLReviewStatus
+from src.data_management.ontology import LoanAgreement, CorporateEntity, RiskItem, HITLAnnotation, HITLReviewStatus # Updated imports
 from src.risk_models.pd_model import PDModel
 from src.risk_models.lgd_model import LGDModel
 from src.data_management.knowledge_graph import KnowledgeGraphService
-import datetime
+import datetime # Ensure datetime is imported
+
 import json # For pretty printing in __main__
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,6 @@ class RiskMapService:
         if hitl_overall_review_status is not None: filters_applied.append(f"hitl_overall_review_status='{hitl_overall_review_status.value}'")
         if min_effective_management_quality_score is not None: filters_applied.append(f"min_effective_mqs={min_effective_management_quality_score}")
         if max_effective_management_quality_score is not None: filters_applied.append(f"max_effective_mqs={max_effective_management_quality_score}")
-
 
         if filters_applied: log_message += " with filters: " + ", ".join(filters_applied)
         else: log_message += "..."
@@ -117,11 +117,14 @@ class RiskMapService:
             latest_loan_overall_anno = self.kb_service.get_latest_hitl_annotation_for_field(loan.loan_id, "loan")
             latest_comp_overall_anno = self.kb_service.get_latest_hitl_annotation_for_field(company.company_id, "company")
 
+            # Prioritize loan-specific annotation for overall status and timestamp
+
             if latest_loan_overall_anno:
                 overall_hitl_status_val = latest_loan_overall_anno.hitl_review_status
                 last_hitl_timestamp_val = latest_loan_overall_anno.annotation_timestamp
                 if latest_loan_overall_anno.hitl_analyst_notes: has_notes_val = True
-            elif latest_comp_overall_anno:
+            elif latest_comp_overall_anno: # Fallback to company annotation
+
                 overall_hitl_status_val = latest_comp_overall_anno.hitl_review_status
                 last_hitl_timestamp_val = latest_comp_overall_anno.annotation_timestamp
                 if latest_comp_overall_anno.hitl_analyst_notes: has_notes_val = True
@@ -202,7 +205,8 @@ class RiskMapService:
             if item.hitl_has_lgd_override: summary_data[group_key]["override_lgd_count"] +=1
             if item.hitl_has_mqs_override: summary_data[group_key]["override_mqs_count"] +=1
 
-        for data in summary_data.values():
+        for data in summary_data.values(): # Renamed to avoid conflict with outer 'data'
+
             data["average_pd"] = round(sum(data["average_pd"]) / len(data["average_pd"]), 4) if data["average_pd"] else 0.0
             data["average_lgd"] = round(sum(data["average_lgd"]) / len(data["average_lgd"]), 4) if data["average_lgd"] else 0.0
             data["total_expected_loss"] = round(data["total_expected_loss"], 2)
@@ -238,40 +242,43 @@ class RiskMapService:
             logger.warning("Portfolio overview is empty for dimensional summary. Applied filters might be too restrictive.")
             return {}
 
-        if len(dimensions) > 1: # Create a composite key for multi-dimensional grouping
+        if len(dimensions) > 1:
             def composite_key_func(item):
                 return tuple(str(getattr(item, dim, "N/A")) for dim in dimensions)
 
-            summary_data: Dict[tuple, Dict[str, Any]] = {}
+            summary_data_multi: Dict[tuple, Dict[str, Any]] = {} # Explicitly type for multi-dimension
             for item in portfolio_overview:
                 group_key = composite_key_func(item)
-                if group_key not in summary_data:
-                    summary_data[group_key] = {
+                if group_key not in summary_data_multi:
+                    summary_data_multi[group_key] = {
+
                         "total_exposure": 0.0, "total_expected_loss": 0.0, "loan_count": 0,
                         "average_pd": [], "average_lgd": [], "defaulted_loan_count": 0,
                         "override_pd_count": 0, "override_lgd_count": 0, "override_mqs_count": 0
                     }
                 current_el = item.effective_expected_loss_usd if item.effective_expected_loss_usd is not None else 0.0
                 current_ead = item.exposure_at_default_usd if item.exposure_at_default_usd is not None else 0.0
-                summary_data[group_key]["total_exposure"] += current_ead
-                summary_data[group_key]["total_expected_loss"] += current_el
-                summary_data[group_key]["loan_count"] += 1
-                if item.effective_pd_estimate is not None: summary_data[group_key]["average_pd"].append(item.effective_pd_estimate)
-                if item.effective_lgd_estimate is not None: summary_data[group_key]["average_lgd"].append(item.effective_lgd_estimate)
-                if item.is_defaulted: summary_data[group_key]["defaulted_loan_count"] +=1
-                if item.hitl_has_pd_override: summary_data[group_key]["override_pd_count"] +=1
-                if item.hitl_has_lgd_override: summary_data[group_key]["override_lgd_count"] +=1
-                if item.hitl_has_mqs_override: summary_data[group_key]["override_mqs_count"] +=1
+                summary_data_multi[group_key]["total_exposure"] += current_ead
+                summary_data_multi[group_key]["total_expected_loss"] += current_el
+                summary_data_multi[group_key]["loan_count"] += 1
+                if item.effective_pd_estimate is not None: summary_data_multi[group_key]["average_pd"].append(item.effective_pd_estimate)
+                if item.effective_lgd_estimate is not None: summary_data_multi[group_key]["average_lgd"].append(item.effective_lgd_estimate)
+                if item.is_defaulted: summary_data_multi[group_key]["defaulted_loan_count"] +=1
+                if item.hitl_has_pd_override: summary_data_multi[group_key]["override_pd_count"] +=1
+                if item.hitl_has_lgd_override: summary_data_multi[group_key]["override_lgd_count"] +=1
+                if item.hitl_has_mqs_override: summary_data_multi[group_key]["override_mqs_count"] +=1
 
-            for data_val in summary_data.values(): # Renamed to avoid conflict
+            for data_val in summary_data_multi.values():
                 data_val["average_pd"] = round(sum(data_val["average_pd"]) / len(data_val["average_pd"]), 4) if data_val["average_pd"] else 0.0
                 data_val["average_lgd"] = round(sum(data_val["average_lgd"]) / len(data_val["average_lgd"]), 4) if data_val["average_lgd"] else 0.0
                 data_val["total_expected_loss"] = round(data_val["total_expected_loss"], 2)
-            logger.info(f"Generated multi-dimensional risk summary by {dimensions} for {len(summary_data)} groups.")
-            return summary_data
-        else: # Single dimension
+            logger.info(f"Generated multi-dimensional risk summary by {dimensions} for {len(summary_data_multi)} groups.")
+            return summary_data_multi # type: ignore
+        else:
             group_by_field = dimensions[0]
-            if not hasattr(RiskItem, group_by_field): # Basic check if field exists
+            # Basic check if field exists using RiskItem.model_fields
+            if group_by_field not in RiskItem.model_fields:
+
                  logger.error(f"Invalid dimension for summary: {group_by_field}")
                  return {}
             summary = self._generate_summary(portfolio_overview, group_by_field=group_by_field)
@@ -284,7 +291,8 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     logger.info("--- Testing RiskMapService (Extended HITL & Filtering) ---")
-    kb = KnowledgeBaseService() # This will load sample_hitl_annotations.json
+    kb = KnowledgeBaseService()
+
     pd_m = PDModel()
     lgd_m = LGDModel()
 
@@ -301,60 +309,61 @@ if __name__ == "__main__":
         kg_service = KnowledgeGraphService(kb_service=kb)
         risk_map_service = RiskMapService(kb_service=kb, pd_model=pd_m, lgd_model=lgd_m, kg_service=kg_service)
 
-        logger.info("\n--- Full Portfolio Overview (First 2 items) ---")
+        logger.info("\n--- Full Portfolio Overview (First item if available) ---")
         portfolio_all = risk_map_service.generate_portfolio_risk_overview()
         logger.info(f"Total items in full overview: {len(portfolio_all)}")
-        for i, item in enumerate(portfolio_all[:2]):
-            logger.info(f"Item {i+1}: {item.model_dump_json(indent=2, exclude_none=True)}")
+        if portfolio_all:
+            logger.info(f"First Item: {portfolio_all[0].model_dump_json(indent=2, exclude_none=True)}")
+
 
         logger.info("\n--- Filtered: Technology Sector ---")
         portfolio_tech = risk_map_service.generate_portfolio_risk_overview(industry_sector="Technology")
         logger.info(f"Tech items: {len(portfolio_tech)}. First if available: {portfolio_tech[0].loan_id if portfolio_tech else 'None'}")
 
         logger.info("\n--- Filtered: Effective PD > 0.07 ---")
-        # Note: sample_hitl_annotations.json has LOAN7002 with PD override to 0.085
-        # Original PD for LOAN7002 might be different based on model training.
         portfolio_pd_filtered = risk_map_service.generate_portfolio_risk_overview(min_effective_pd_estimate=0.07)
         logger.info(f"Items with Effective PD > 0.07: {len(portfolio_pd_filtered)}")
-        for item in portfolio_pd_filtered:
-            logger.info(f"  Loan: {item.loan_id}, EffectivePD: {item.effective_pd_estimate}, Override: {item.hitl_has_pd_override}, ModelPD: {item.model_pd_estimate}")
+        for item in portfolio_pd_filtered: # Limit output for brevity
+            if item.loan_id == "LOAN7002": # LOAN7002 has PD override to 0.085 in sample_hitl_annotations
+                 logger.info(f"  Loan: {item.loan_id}, Company: {item.company_id}, ModelPD: {item.model_pd_estimate}, EffectivePD: {item.effective_pd_estimate}, Override: {item.hitl_has_pd_override}")
 
         logger.info("\n--- Filtered: HITL Status - FLAGGED_MODEL_DISAGREEMENT ---")
-        # sample_hitl_annotations.json has LOAN7002 as FLAGGED_MODEL_DISAGREEMENT
+
         portfolio_hitl_flagged = risk_map_service.generate_portfolio_risk_overview(
             hitl_overall_review_status=HITLReviewStatus.FLAGGED_MODEL_DISAGREEMENT
         )
         logger.info(f"Items with HITL Status FLAGGED_MODEL_DISAGREEMENT: {len(portfolio_hitl_flagged)}")
         if portfolio_hitl_flagged:
-             logger.info(f"  First flagged item loan_id: {portfolio_hitl_flagged[0].loan_id}")
+             logger.info(f"  First flagged item loan_id: {portfolio_hitl_flagged[0].loan_id}, status: {portfolio_hitl_flagged[0].hitl_overall_review_status.value if portfolio_hitl_flagged[0].hitl_overall_review_status else 'N/A'}")
 
         logger.info("\n--- Filtered: Effective MQS < 7 ---")
-        # COMP003 has original MQS 5 in sample_companies.csv. No override in sample_hitl_annotations.json
         portfolio_mqs_filtered = risk_map_service.generate_portfolio_risk_overview(max_effective_management_quality_score=6)
         logger.info(f"Items with Effective MQS < 7: {len(portfolio_mqs_filtered)}")
-        for item in portfolio_mqs_filtered:
-             logger.info(f"  Loan: {item.loan_id}, Company: {item.company_id}, EffectiveMQS: {item.effective_management_quality_score}, Override: {item.hitl_has_mqs_override}")
+        # for item in portfolio_mqs_filtered:
+        #      logger.info(f"  Loan: {item.loan_id}, Company: {item.company_id}, EffectiveMQS: {item.effective_management_quality_score}, Override: {item.hitl_has_mqs_override}")
 
         logger.info("\n--- Summary by Sector (on full portfolio) ---")
-        sector_summary = risk_map_service.get_risk_summary_by_sector(portfolio_overview=portfolio_all)
+        sector_summary = risk_map_service.get_risk_summary_by_sector(portfolio_overview=portfolio_all) # Can also do get_risk_summary_by_sector() to use all filters
         logger.info(json.dumps(sector_summary, indent=2, default=str))
 
         logger.info("\n--- Summary by Country (filtered for Technology) ---")
-        country_summary_tech = risk_map_service.get_risk_summary_by_country(portfolio_overview=portfolio_tech)
+        country_summary_tech = risk_map_service.get_risk_summary_by_country(industry_sector="Technology") # Pass filter here
         logger.info(json.dumps(country_summary_tech, indent=2, default=str))
 
-        logger.info("\n--- Summary by 'is_defaulted' (generic dimensions) ---")
+        logger.info("\n--- Summary by 'is_defaulted' (generic dimensions on full portfolio) ---")
         default_summary = risk_map_service.get_risk_summary_by_dimensions(dimensions=["is_defaulted"], portfolio_overview=portfolio_all)
         logger.info(json.dumps(default_summary, indent=2, default=str))
 
-        logger.info("\n--- Summary by 'industry_sector' and 'is_defaulted' (generic dimensions) ---")
+        logger.info("\n--- Summary by 'industry_sector' and 'country_iso_code' (generic multi-dimensions) ---")
         multi_dim_summary = risk_map_service.get_risk_summary_by_dimensions(
-            dimensions=["industry_sector", "is_defaulted"],
+            dimensions=["industry_sector", "country_iso_code"],
             portfolio_overview=portfolio_all
         )
-        # Convert tuple keys to strings for JSON serialization if pretty printing
-        # logger.info(json.dumps({str(k): v for k, v in multi_dim_summary.items()}, indent=2, default=str))
         logger.info(f"Multi-dim summary groups: {len(multi_dim_summary)}")
+        # Example of accessing a multi-dim key if needed for print:
+        # for k, v in multi_dim_summary.items():
+        #     logger.info(f"Group {str(k)}: {v['loan_count']} loans")
+
 
 
     else:
