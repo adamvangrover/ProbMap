@@ -442,11 +442,54 @@ class PDModel:
             return None
 
         classifier = self.model.named_steps['classifier']
-        if not hasattr(classifier, 'predict_proba') or not (isinstance(classifier, RandomForestClassifier)): # Add other tree-based models if needed
+        if not hasattr(classifier, 'predict_proba') or not (isinstance(classifier, RandomForestClassifier)):
             logger.warning(f"Classifier type {type(classifier)} may not be directly supported by shap.TreeExplainer or this SHAP implementation logic. Trying anyway.")
 
-        if not self._feature_names:
+        if not hasattr(self, '_feature_names') or self._feature_names.size == 0:
             logger.error("Feature names are not available. Train model first or ensure _feature_names is populated.")
+            return None
+
+        try:
+            preprocessor = self.model.named_steps['preprocessor']
+            transformed_sample_instance = preprocessor.transform(sample_instance_df)
+
+            if transformed_sample_instance.shape[1] != len(self._feature_names):
+                logger.error(f"Mismatch in transformed feature count ({transformed_sample_instance.shape[1]}) and stored feature names count ({len(self._feature_names)}). SHAP values might be misaligned.")
+                logger.error(f"Stored feature names: {self._feature_names}")
+                try:
+                    self._feature_names = self.model.named_steps['preprocessor'].get_feature_names_out()
+                    logger.info(f"Re-fetched feature names: {self._feature_names}")
+                    if transformed_sample_instance.shape[1] != len(self._feature_names):
+                         logger.error("Feature count mismatch persists even after re-fetching names. Aborting SHAP.")
+                         return None
+                except Exception as e_refetch:
+                    logger.error(f"Failed to re-fetch feature names: {e_refetch}. Aborting SHAP.")
+                    return None
+
+            explainer = shap.TreeExplainer(classifier)
+            shap_values = explainer.shap_values(transformed_sample_instance)
+
+            if isinstance(shap_values, list) and len(shap_values) == 2:
+                shap_values_for_positive_class = shap_values[1]
+            else:
+                shap_values_for_positive_class = shap_values
+
+            if shap_values_for_positive_class.ndim == 1:
+                mean_abs_shap = np.abs(shap_values_for_positive_class)
+            else:
+                mean_abs_shap = np.abs(shap_values_for_positive_class).mean(axis=0)
+
+            feature_shap_dict = dict(zip(self._feature_names, mean_abs_shap))
+
+            sorted_feature_shap = dict(sorted(feature_shap_dict.items(), key=lambda item: item[1], reverse=True))
+
+            return sorted_feature_shap
+
+        except Exception as e:
+            logger.error(f"Error calculating SHAP values: {e}")
+            logger.error(f"Sample instance columns: {sample_instance_df.columns.tolist()}")
+            logger.error(f"Expected (numerical then categorical): {self.numerical_features} + {self.categorical_features}")
+
             return None
 
         try:
