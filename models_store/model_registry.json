@@ -1,0 +1,1076 @@
+{
+    "PDModel": [
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914233755",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 0.8571428571428571,
+                "test_roc_auc": 0.5
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T23:37:55.768983+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914233708",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 0.8571428571428571,
+                "test_roc_auc": 0.5
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T23:37:08.585652+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914233517",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T23:35:17.487561+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914233439",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T23:34:39.516673+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914170741",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T17:07:41.494548+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914170733",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T17:07:33.797251+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914170144",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T17:01:44.660108+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914170136",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T17:01:36.671072+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914003620",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T00:36:20.644622+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250914003612",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T00:36:12.705692+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023549",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:35:49.293917+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023542",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:35:42.035986+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023500",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:35:00.364644+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023453",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:34:53.172905+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023400",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:34:00.595590+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023352",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:33:52.297067+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023308",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:33:08.046976+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023301",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:33:01.366710+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023120",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:31:20.360102+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023113",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:31:13.675514+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023042",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:30:42.708668+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912023035",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:30:35.895166+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912022946",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:29:46.857872+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912022939",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:29:39.702361+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912022908",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 50,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:29:08.760957+00:00",
+            "status": "production"
+        },
+        {
+            "model_name": "PDModel",
+            "model_version": "20250912022858",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 1.0,
+                "test_roc_auc": 0.0
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-12T02:28:58.860978+00:00",
+            "status": "registered"
+        }
+    ],
+    "LGDModel": [
+        {
+            "model_name": "LGDModel",
+            "model_version": "20250914233755",
+            "model_path": "models_store/lgd_model.joblib",
+            "metrics": {
+                "train_mse": 3.119353414547968e-13,
+                "test_mse": 0.11016566456630861,
+                "train_rmse": 5.585117200693257e-07,
+                "test_rmse": 0.3319121338039762
+            },
+            "parameters": {
+                "alpha": 0.9,
+                "ccp_alpha": 0.0,
+                "criterion": "friedman_mse",
+                "init": null,
+                "learning_rate": 0.1,
+                "loss": "squared_error",
+                "max_depth": 3,
+                "max_features": null,
+                "max_leaf_nodes": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "n_estimators": 100,
+                "n_iter_no_change": null,
+                "random_state": 42,
+                "subsample": 1.0,
+                "tol": 0.0001,
+                "validation_fraction": 0.1,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "GradientBoostingRegressor"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T23:37:55.857390+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "LGDModel",
+            "model_version": "20250914233708",
+            "model_path": "models_store/lgd_model.joblib",
+            "metrics": {
+                "train_mse": 1.7836792523628112e-12,
+                "test_mse": 0.09229714643809384,
+                "train_rmse": 1.335544552743491e-06,
+                "test_rmse": 0.3038044542762562
+            },
+            "parameters": {
+                "alpha": 0.9,
+                "ccp_alpha": 0.0,
+                "criterion": "friedman_mse",
+                "init": null,
+                "learning_rate": 0.1,
+                "loss": "squared_error",
+                "max_depth": 3,
+                "max_features": null,
+                "max_leaf_nodes": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "n_estimators": 100,
+                "n_iter_no_change": null,
+                "random_state": 42,
+                "subsample": 1.0,
+                "tol": 0.0001,
+                "validation_fraction": 0.1,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "GradientBoostingRegressor"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2025-09-14T23:37:08.686304+00:00",
+            "status": "registered"
+        }
+    ]
+}
