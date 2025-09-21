@@ -1,0 +1,185 @@
+import pandas as pd
+import numpy as np
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, accuracy_score
+
+# --- 1. Generate Expanded Synthetic Sample Data ---
+# This data now includes a mix of consumer, corporate, and macroeconomic features
+# to simulate a more diverse lending portfolio.
+def generate_sample_data(num_records=2000):
+    """Generates a DataFrame with synthetic credit data for various use cases."""
+    np.random.seed(42) # for reproducibility
+    data = {
+        # Consumer / Micro Features
+        'credit_score': np.random.randint(300, 851, size=num_records),
+        'income': np.random.lognormal(mean=11, sigma=0.75, size=num_records).astype(int),
+        'debt_to_income_ratio': np.random.uniform(0.1, 0.6, size=num_records),
+
+        # Corporate / Business Features
+        'net_working_capital': np.random.randint(-50000, 1000000, size=num_records),
+        'ar_securitization_flag': np.random.choice([0, 1], size=num_records, p=[0.9, 0.1]),
+        'corporate_family_rating': np.random.choice(['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'NR'], size=num_records, p=[0.05, 0.1, 0.15, 0.2, 0.2, 0.15, 0.1, 0.05]),
+
+        # Loan Structure Features
+        'loan_amount': np.random.lognormal(mean=10, sigma=1, size=num_records).astype(int),
+        'loan_term_months': np.random.choice([12, 24, 36, 60, 120, 240], size=num_records),
+        'loan_type': np.random.choice(['unsecured_consumer', 'senior_secured_loan', 'unsecured_bond', 'institutional_loan'], size=num_records),
+
+        # Macroeconomic Features
+        'gdp_growth_rate': np.random.normal(loc=0.02, scale=0.01, size=num_records),
+        'unemployment_rate': np.random.normal(loc=0.05, scale=0.015, size=num_records),
+    }
+    df = pd.DataFrame(data)
+
+    # For simplicity, if credit_score is high, assume it's a consumer loan and set corporate features to neutral values
+    df.loc[df['credit_score'] > 750, ['net_working_capital', 'ar_securitization_flag', 'corporate_family_rating']] = [0, 0, 'NR']
+
+
+    # Create a more complex synthetic target variable 'default_status'
+    probability = 1 / (1 + np.exp(-(
+        -0.01 * df['credit_score']
+        + 0.000001 * df['income']
+        + 2.0 * df['debt_to_income_ratio']
+        - 0.000002 * df['net_working_capital']
+        + 0.5 * df['ar_securitization_flag']
+        + 0.000005 * df['loan_amount']
+        - 10 * df['gdp_growth_rate']
+        + 15 * df['unemployment_rate']
+        - 4.0 # a new baseline intercept
+    )))
+    df['default_status'] = (np.random.rand(num_records) < probability).astype(int)
+    
+    return df
+
+print("1. Generating expanded synthetic data...")
+credit_data = generate_sample_data()
+print("Sample data generated successfully. Here's a preview:")
+print(credit_data.head())
+print("\n" + "="*50 + "\n")
+
+
+# --- 2. Define Features and Target ---
+X = credit_data.drop('default_status', axis=1)
+y = credit_data['default_status']
+
+# Identify numerical and categorical features
+numerical_features = X.select_dtypes(include=np.number).columns.tolist()
+categorical_features = X.select_dtypes(exclude=np.number).columns.tolist()
+
+print(f"Numerical features: {numerical_features}")
+print(f"Categorical features: {categorical_features}")
+print("\n" + "="*50 + "\n")
+
+
+# --- 3. Create Preprocessing and Modeling Pipeline ---
+# This is a crucial step to ensure that new data is processed in the exact
+# same way as the training data.
+
+# Create a preprocessing pipeline for numerical features (scaling)
+numerical_transformer = StandardScaler()
+
+# Create a preprocessing pipeline for categorical features (one-hot encoding)
+# handle_unknown='ignore' will prevent errors if a new category appears during prediction
+categorical_transformer = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+
+# Bundle preprocessing for numerical and categorical data
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numerical_transformer, numerical_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Define the model
+# We use Logistic Regression, a common choice for PD models due to its interpretability.
+model = LogisticRegression(solver='liblinear', random_state=42, class_weight='balanced')
+
+# Create the full pipeline
+# It first preprocesses the data, then fits the model.
+full_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                ('classifier', model)])
+
+
+# --- 4. Split Data and Train the Model ---
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+print("4. Training the model pipeline...")
+full_pipeline.fit(X_train, y_train)
+print("Model training complete.")
+print("\n" + "="*50 + "\n")
+
+
+# --- 5. Evaluate the Model ---
+print("5. Evaluating the model on the test set...")
+y_pred = full_pipeline.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+
+print(f"Model Accuracy: {accuracy:.4f}")
+print("Classification Report:")
+print(report)
+print("\n" + "="*50 + "\n")
+
+
+# --- 6. Save the Model Pipeline to a Joblib File ---
+model_filename = 'pd_rating_model_expanded.joblib'
+print(f"6. Saving the trained pipeline to '{model_filename}'...")
+joblib.dump(full_pipeline, model_filename)
+print("Model saved successfully.")
+print("\n" + "="*50 + "\n")
+
+
+# --- 7. Load the Model and Make Predictions for Different Use Cases ---
+print("7. Demonstrating how to load the model and predict on new data...")
+# Load the saved pipeline
+loaded_pipeline = joblib.load(model_filename)
+print("Model loaded successfully.")
+
+# --- Use Case A: Consumer Auto Loan ---
+consumer_loan_data = pd.DataFrame({
+    'credit_score': [720],
+    'income': [85000],
+    'debt_to_income_ratio': [0.25],
+    'net_working_capital': [0], # N/A for consumer
+    'ar_securitization_flag': [0], # N/A for consumer
+    'corporate_family_rating': ['NR'], # Not Rated
+    'loan_amount': [25000],
+    'loan_term_months': [60],
+    'loan_type': ['unsecured_consumer'],
+    'gdp_growth_rate': [0.025], # Current macro conditions
+    'unemployment_rate': [0.04]
+})
+
+# --- Use Case B: Corporate Loan (Senior Secured) ---
+corporate_loan_data = pd.DataFrame({
+    'credit_score': [0], # N/A for corporate entity
+    'income': [50000000], # Annual revenue
+    'debt_to_income_ratio': [0], # Use other leverage metrics for corps, 0 for this model
+    'net_working_capital': [750000],
+    'ar_securitization_flag': [1], # Has an AR facility
+    'corporate_family_rating': ['BB'],
+    'loan_amount': [10000000],
+    'loan_term_months': [120],
+    'loan_type': ['senior_secured_loan'],
+    'gdp_growth_rate': [0.025], # Current macro conditions
+    'unemployment_rate': [0.04]
+})
+
+
+print("\n--- Predicting for Use Case A: Consumer Loan ---")
+print(consumer_loan_data.T)
+pd_prob_consumer = loaded_pipeline.predict_proba(consumer_loan_data)[0][1]
+print(f"\nProbability of Default (PD): {pd_prob_consumer:.4f}")
+
+print("\n" + "="*50 + "\n")
+
+print("\n--- Predicting for Use Case B: Corporate Loan ---")
+print(corporate_loan_data.T)
+pd_prob_corporate = loaded_pipeline.predict_proba(corporate_loan_data)[0][1]
+print(f"\nProbability of Default (PD): {pd_prob_corporate:.4f}")
+print("\n" + "="*50 + "\n")
+
