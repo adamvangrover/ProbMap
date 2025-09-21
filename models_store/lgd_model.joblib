@@ -1,0 +1,172 @@
+import pandas as pd
+import numpy as np
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+# --- 1. Generate Synthetic Data for LGD Modeling ---
+# This data focuses on features that influence recovery rates on defaulted loans.
+# Note: This dataset would typically only contain loans that have already defaulted.
+def generate_lgd_data(num_records=2000):
+    """Generates a DataFrame with synthetic data for LGD modeling."""
+    np.random.seed(42) # for reproducibility
+    data = {
+        # Loan & Collateral Features
+        'loan_amount_outstanding': np.random.lognormal(mean=11, sigma=1.2, size=num_records),
+        'collateral_value': np.random.lognormal(mean=10.8, sigma=1.5, size=num_records),
+        'loan_seniority': np.random.choice(['senior_secured', 'subordinated', 'unsecured'], size=num_records, p=[0.5, 0.2, 0.3]),
+        'collateral_type': np.random.choice(['real_estate', 'accounts_receivable', 'inventory', 'machinery', 'none'], size=num_records, p=[0.3, 0.2, 0.2, 0.1, 0.2]),
+        'guarantee_flag': np.random.choice([0, 1], size=num_records, p=[0.8, 0.2]),
+
+        # Borrower Features
+        'borrower_industry': np.random.choice(['manufacturing', 'services', 'retail', 'real_estate', 'other'], size=num_records),
+        
+        # Macroeconomic Feature
+        'economic_cycle_indicator': np.random.choice(['expansion', 'recession'], size=num_records, p=[0.7, 0.3])
+    }
+    df = pd.DataFrame(data)
+
+    # Clean up collateral for unsecured loans
+    df.loc[df['loan_seniority'] == 'unsecured', 'collateral_type'] = 'none'
+    df.loc[df['collateral_type'] == 'none', 'collateral_value'] = 0
+
+    # Calculate Loan-To-Value (LTV) ratio, a key driver
+    # Cap LTV at a high value to avoid division by zero or extreme values
+    df['ltv_ratio'] = np.clip(df['loan_amount_outstanding'] / (df['collateral_value'] + 1e-6), 0, 5)
+
+
+    # --- Create a synthetic target variable: 'recovery_rate' (0 to 1) ---
+    base_recovery = 0.4
+    
+    # Adjust recovery based on features
+    recovery_adjustment = (
+        -0.2 * (df['ltv_ratio'] - 1)  # Higher LTV lowers recovery
+        + (df['loan_seniority'] == 'senior_secured') * 0.25
+        - (df['loan_seniority'] == 'unsecured') * 0.20
+        + (df['guarantee_flag']) * 0.1
+        - (df['economic_cycle_indicator'] == 'recession') * 0.15
+    )
+    
+    # Add some random noise
+    noise = np.random.normal(0, 0.1, size=num_records)
+    
+    # Calculate final recovery rate and clip between 0 and 1
+    df['recovery_rate'] = np.clip(base_recovery + recovery_adjustment + noise, 0, 1)
+    
+    return df
+
+print("1. Generating synthetic LGD data...")
+lgd_credit_data = generate_lgd_data()
+# The final LGD is 1 - recovery_rate
+lgd_credit_data['lgd'] = 1 - lgd_credit_data['recovery_rate']
+
+print("Sample data generated successfully. Here's a preview:")
+print(lgd_credit_data.head())
+print("\n" + "="*50 + "\n")
+
+
+# --- 2. Define Features and Target ---
+# We will predict LGD. We could also predict recovery_rate.
+X = lgd_credit_data.drop(['recovery_rate', 'lgd'], axis=1)
+y = lgd_credit_data['lgd']
+
+# Identify numerical and categorical features
+numerical_features = X.select_dtypes(include=np.number).columns.tolist()
+categorical_features = X.select_dtypes(exclude=np.number).columns.tolist()
+
+print(f"Numerical features: {numerical_features}")
+print(f"Categorical features: {categorical_features}")
+print("\n" + "="*50 + "\n")
+
+
+# --- 3. Create Preprocessing and Modeling Pipeline ---
+numerical_transformer = StandardScaler()
+categorical_transformer = OneHotEncoder(handle_unknown='ignore')
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numerical_transformer, numerical_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Define the regression model. Gradient Boosting is a powerful choice for this task.
+model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+
+# Create the full pipeline
+full_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                ('regressor', model)])
+
+
+# --- 4. Split Data and Train the Model ---
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print("4. Training the LGD model pipeline...")
+full_pipeline.fit(X_train, y_train)
+print("Model training complete.")
+print("\n" + "="*50 + "\n")
+
+
+# --- 5. Evaluate the Model ---
+print("5. Evaluating the model on the test set...")
+y_pred = full_pipeline.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Model Mean Squared Error (MSE): {mse:.4f}")
+print(f"Model R-squared (R²): {r2:.4f}")
+print("\n" + "="*50 + "\n")
+
+
+# --- 6. Save the Model Pipeline to a Joblib File ---
+model_filename = 'lgd_model.joblib'
+print(f"6. Saving the trained pipeline to '{model_filename}'...")
+joblib.dump(full_pipeline, model_filename)
+print("Model saved successfully.")
+print("\n" + "="*50 + "\n")
+
+
+# --- 7. Load the Model and Make Predictions for Different Scenarios ---
+print("7. Demonstrating how to load the model and predict LGD on new defaulted loans...")
+loaded_pipeline = joblib.load(model_filename)
+print("Model loaded successfully.")
+
+# --- Scenario A: Senior Secured Real Estate Loan in a Recession ---
+secured_loan_data = pd.DataFrame({
+    'loan_amount_outstanding': [800000],
+    'collateral_value': [1000000], # LTV is 0.8
+    'loan_seniority': ['senior_secured'],
+    'collateral_type': ['real_estate'],
+    'guarantee_flag': [0],
+    'borrower_industry': ['services'],
+    'economic_cycle_indicator': ['recession'], # Bad time to recover assets
+    'ltv_ratio': [0.8]
+})
+
+# --- Scenario B: Unsecured Personal Loan in an Expansion ---
+unsecured_loan_data = pd.DataFrame({
+    'loan_amount_outstanding': [25000],
+    'collateral_value': [0], # No collateral
+    'loan_seniority': ['unsecured'],
+    'collateral_type': ['none'],
+    'guarantee_flag': [0],
+    'borrower_industry': ['retail'],
+    'economic_cycle_indicator': ['expansion'], # Good time to recover assets
+    'ltv_ratio': [5.0] # LTV is very high (capped)
+})
+
+print("\n--- Predicting for Scenario A: Secured Loan in Recession ---")
+predicted_lgd_secured = loaded_pipeline.predict(secured_loan_data)
+print(f"Predicted LGD: {predicted_lgd_secured[0]:.2%}")
+print(f"(Meaning an expected loss of {predicted_lgd_secured[0] * 800000:,.0f} on an 800,000 loan)")
+
+print("\n" + "="*50 + "\n")
+
+print("\n--- Predicting for Scenario B: Unsecured Loan in Expansion ---")
+predicted_lgd_unsecured = loaded_pipeline.predict(unsecured_loan_data)
+print(f"Predicted LGD: {predicted_lgd_unsecured[0]:.2%}")
+print(f"(Meaning an expected loss of {predicted_lgd_unsecured[0] * 25000:,.0f} on a 25,000 loan)")
+print("\n" + "="*50 + "\n")
