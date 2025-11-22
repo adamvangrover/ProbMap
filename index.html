@@ -2,168 +2,511 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Risk Analysis System Overview</title>
+    <title>Risk Probability Map - Immersive 3D Visualization</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; line-height: 1.6; background-color: #f9f9f9; color: #333; }
-        h1, h2, h3 { color: #2c3e50; }
-        nav ul { list-style-type: none; padding: 0; background-color: #34495e; text-align: center; }
-        nav ul li { display: inline; margin-right: 0; }
-        nav ul li a { display: inline-block; padding: 15px 20px; text-decoration: none; color: white; }
-        nav ul li a:hover { background-color: #4e667f; }
-        .container { max-width: 1000px; margin: auto; background-color: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #eee; border-radius: 5px; background-color: #fff; }
-        .section h2 { border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        .code-block { background-color: #f4f4f4; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
-        table.data-table { border-collapse: collapse; width: 100%; margin-bottom:15px; font-size: 0.9em; } /* Adjusted for full width */
-        table.data-table th, table.data-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        table.data-table th { background-color: #3498db; color: white; }
-        table.data-table tr:nth-child(even) { background-color: #f2f2f2; }
-        img { max-width: 100%; height: auto; border: 1px solid #ddd; margin-top:10px; margin-bottom:10px; border-radius: 4px;}
-        ul li { margin-bottom: 8px; }
-        footer { text-align: center; margin-top: 30px; padding: 15px; font-size: 0.9em; color: #777; }
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: white; }
+        #canvas-container { width: 100%; height: 100vh; display: block; outline: none; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+        .hud-panel {
+            position: absolute;
+            background: rgba(16, 24, 32, 0.85);
+            border: 1px solid rgba(52, 152, 219, 0.5);
+            padding: 20px;
+            border-radius: 4px;
+            pointer-events: auto;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.3s;
+        }
+
+        #info-panel { bottom: 30px; left: 30px; width: 320px; opacity: 0; transform: translateY(20px); transition: all 0.3s ease-out; border-left: 4px solid #3498db; }
+        #info-panel.visible { opacity: 1; transform: translateY(0); }
+
+        #controls-panel { top: 30px; right: 30px; width: 250px; text-align: right; }
+
+        h1 { margin: 0 0 5px 0; font-size: 1.4em; color: #fff; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        h2 { margin: 0 0 5px 0; font-size: 1.2em; color: #fff; font-weight: 500; }
+        .subtitle { color: #3498db; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; display: block; }
+
+        .metric-row { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 8px 0; font-size: 0.9em; }
+        .metric-label { color: #8899a6; }
+        .metric-value { color: #fff; font-weight: 500; font-family: 'Consolas', monospace; }
+
+        button {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid #3498db;
+            color: #3498db;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 5px;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            border-radius: 2px;
+        }
+        button:hover, button.active { background: #3498db; color: white; box-shadow: 0 0 10px rgba(52, 152, 219, 0.4); }
+
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5em; color: #3498db; font-weight: 300; letter-spacing: 2px; }
+
+        .legend-item { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 6px; font-size: 0.8em; color: #ccc; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; margin-left: 10px; display: inline-block; box-shadow: 0 0 5px currentColor; }
+
+        /* Navigation Link */
+        #nav-link { position: absolute; top: 30px; left: 30px; pointer-events: auto; z-index: 10; }
+        #nav-link a {
+            color: #fff;
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 30px;
+            background: rgba(0,0,0,0.5);
+            font-size: 0.9em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        #nav-link a:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+        #nav-link a span { margin-right: 8px; font-size: 1.2em; line-height: 0.8; }
+
+        /* Axis Labels */
+        .axis-label {
+            position: absolute;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8em;
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+            border: 1px solid #555;
+        }
     </style>
+
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header class="section" style="background-color: #ecf0f1; border-color: #bdc3c7;">
-            <h1 style="text-align:center;">Proprietary Credit Risk Probability Map - System Overview</h1>
-            <nav>
-                <ul>
-                    <li><a href="#introduction">Introduction</a></li>
-                    <li><a href="#capabilities">Capabilities</a></li>
-                    <li><a href="#walkthrough">Walkthrough</a></li>
-                    <li><a href="#snapshot">Notebook Snapshot</a></li>
-                    <li><a href="#outputs">Other Outputs</a></li>
-                    <li><a href="README_Analysis.md">Full README</a></li>
-                    <li><a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">Full Analysis Notebook</a></li>
-                </ul>
-            </nav>
-        </header>
+    <div id="loading">INITIALIZING SYSTEM DATA...</div>
 
-        <section id="introduction" class="section">
-            <h2>1. Introduction</h2>
-            <p>This document provides an overview of the Evolved Credit Risk Analysis System, a proof-of-concept designed to offer a holistic and dynamic view of credit risk. It integrates quantitative models, qualitative data, knowledge graph context, and scenario analysis to provide a comprehensive assessment framework.</p>
-            <p>The system operates on a synthetic, file-based dataset for demonstration purposes. For full technical details, setup instructions, and in-depth explanations, please refer to the <a href="README_Analysis.md">Full System README</a>.</p>
-        </section>
-
-        <section id="capabilities" class="section">
-            <h2>2. System Capabilities</h2>
-            <ul>
-                <li><strong>Expanded Ontology & Rich Data Model:</strong> Defines core financial concepts using Pydantic models for structured data representation.</li>
-                <li><strong>Integrated Knowledge Graph:</strong> Captures interconnections (subsidiaries, suppliers, guarantors) and provides contextual insights like network centrality.</li>
-                <li><strong>Advanced Risk Models:</strong> Utilizes a Random Forest Classifier for Probability of Default (PD) and a Gradient Boosting Regressor for Loss Given Default (LGD), both incorporating enhanced feature engineering.</li>
-                <li><strong>SHAP Explainability for PD Model:</strong> Offers insights into the drivers of PD model predictions.</li>
-                <li><strong>Dynamic Pricing Model:</strong> Calculates loan interest rates based on PD, LGD, customer segments, and knowledge graph context.</li>
-                <li><strong>Comprehensive Risk Mapping Service:</strong> Aggregates portfolio-wide risk, including qualitative scores and KG metrics, with summaries by sector and country.</li>
-                <li><strong>MLOps Framework (PoC):</strong> Features automated model registration, loading of "production" models, prediction logging, data drift detection (numerical & categorical), and simulated performance monitoring.</li>
-                <li><strong>Sophisticated Scenario Simulation:</strong> Allows for feature-level shocks to raw data, with PD/LGD re-calculated by models to assess stress impact realistically.</li>
-            </ul>
-        </section>
-
-        <section id="walkthrough" class="section">
-            <h2>3. Walkthrough / How to Use</h2>
-            <p>To get started with the system:</p>
-            <ol>
-                <li>Ensure Python 3.9+ is installed and set up a virtual environment.</li>
-                <li>Install dependencies: <code class="code-block" style="display:inline; padding: 2px 5px;">pip install -r requirements.txt</code></li>
-                <li>Train the PD and LGD models by running their respective scripts (e.g., <code class="code-block" style="display:inline; padding: 2px 5px;">python -m src.risk_models.pd_model</code>). This also registers them.</li>
-                <li>Generate system outputs like the orchestration manifest: <code class="code-block" style="display:inline; padding: 2px 5px;">python scripts/generate_outputs.py</code>.</li>
-                <li>Explore the <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">Comprehensive Analysis Notebook</a> for an interactive demonstration of the system's capabilities.</li>
-            </ol>
-            <p>For detailed setup and execution instructions, please see the <a href="README_Analysis.md#3-setup-and-running-the-system">Setup and Running the System section in the full README</a>.</p>
-        </section>
-
-        <section id="snapshot" class="section">
-            <h2>4. "Probability Map" - Notebook Snapshot/Summary</h2>
-            <p>The <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">Comprehensive Analysis Notebook</a> is the primary interface for visualizing and interacting with the "Probability Map". It synthesizes data from all components to provide risk insights. Below are conceptual snapshots:</p>
-
-            <h3>Illustrative Portfolio Risk/Return Landscape</h3>
-            <p>This conceptual plot positions different asset classes (corporate loans, synthetic equities, synthetic commodities) in a risk-return space. Bubble size can represent exposure or market capitalization.</p>
-            <img src="output/plot_portfolio_risk_return.png" alt="Portfolio Risk-Return Landscape (Conceptual)">
-
-            <h3>Example Peer Comparison</h3>
-            <p>The notebook allows for deep dives into specific entities, including comparison against synthetic peers on key metrics.</p>
-            <img src="output/plot_peer_comparison.png" alt="Peer Comparison Chart (Conceptual)">
-
-            <h3>Key Portfolio Data Snippet</h3>
-            <p>The portfolio overview generated by the RiskMapService provides a rich table of data. Here's a small sample of what the structure looks like (actual data will vary based on the synthetic dataset):</p>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>loan_id</th>
-                  <th>company_id</th>
-                  <th>company_name</th>
-                  <th>pd_estimate</th>
-                  <th>lgd_estimate</th>
-                  <th>expected_loss_usd</th>
-                  <th>management_quality_score</th>
-                  <th>kg_degree_centrality</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>LOAN7001</td>
-                  <td>COMP001</td>
-                  <td>Innovatech Solutions</td>
-                  <td>0.0452</td>
-                  <td>0.3875</td>
-                  <td>87567.50</td>
-                  <td>8</td>
-                  <td>0.052</td>
-                </tr>
-                <tr>
-                  <td>LOAN7003</td>
-                  <td>COMP002</td>
-                  <td>GreenBuild Corp</td>
-                  <td>0.0911</td>
-                  <td>0.5210</td>
-                  <td>47463.10</td>
-                  <td>7</td>
-                  <td>0.030</td>
-                </tr>
-                <tr>
-                  <td>LOAN7004</td>
-                  <td>COMP003</td>
-                  <td>HealthFirst Pharma</td>
-                  <td>0.1530</td>
-                  <td>0.6050</td>
-                  <td>92565.00</td>
-                  <td>9</td>
-                  <td>0.040</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <h3>Deep Dive Snapshot: Example Company Analysis</h3>
-            <p>For a selected company (e.g., Innovatech Solutions - COMP001), a deep dive in the notebook might summarize key risk factors (actual values from a run):</p>
-            <ul>
-                <li><strong>Quantitative Scores:</strong> PD: 0.0452, LGD: 0.3875, Base EL: $87,567.50</li>
-                <li><strong>Financial Health (Latest FS):</strong> D/E: 0.67, Current Ratio: 2.20. Overall: Good</li>
-                <li><strong>PD Model Drivers (SHAP Top 3):</strong> debt_to_equity_ratio, company_age_at_origination, net_profit_margin.</li>
-                <li><strong>Knowledge Graph Context:</strong> Centrality: 0.052, Suppliers: 2, Customers: 1, Subsidiaries: 0. Implications: Moderate network activity, some supplier concentration.</li>
-                <li><strong>Qualitative Factors:</strong> Management Quality Score: 8.</li>
-                <li><strong>Stress Test Impact (Targeted Shock for COMP001):</strong> Stressed EL: $131,351.25 (Change: 50.00 %). Resilience: Moderate.</li>
-            </ul>
-            <p>This multi-faceted view helps in forming a comprehensive risk opinion. For the full interactive analysis, please <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">refer to the notebook</a>.</p>
-        </section>
-
-        <section id="outputs" class="section">
-            <h2>5. Other Generated Outputs</h2>
-            <p>The system can generate structured metadata and data files:</p>
-            <ul>
-                <li><a href="output/orchestration_manifest.json">Orchestration Manifest (JSON)</a>: Describes data sources, active models, and key services.</li>
-                <li><a href="output/risk_profiles.jsonld">Sample Risk Profiles (JSON-LD)</a>: Example company risk profiles in a linked data format.</li>
-                <li><a href="output/consolidated_data_export.xlsx">Consolidated Data Export (Excel)</a> - Key data tables in Excel format.</li>
-                <li><a href="notebooks/03_excel_data_exporter.ipynb" target="_blank">Excel Data Exporter Notebook</a> - Jupyter Notebook to generate the Excel export.</li>
-                <li><a href="output/final_excel_summary.md" target="_blank">Excel Data Summary (Markdown)</a> - A markdown guide to the contents of the consolidated Excel export.</li>
-
-            </ul>
-        </section>
-
-        <footer>
-            <p>This system is a Proof of Concept and demonstrates a comprehensive approach to credit risk analysis using synthetic data. For detailed information, please refer to the <a href="README_Analysis.md">Full README</a> and the <a href="notebooks/02_comprehensive_risk_analysis.ipynb" target="_blank">analysis notebook</a>.</p>
-        </footer>
+    <div id="nav-link">
+        <a href="system_overview.html"><span>&#8592;</span> System Overview</a>
     </div>
+
+    <div id="canvas-container"></div>
+    <div id="tooltip"></div>
+
+    <div id="ui-layer">
+        <div id="controls-panel" class="hud-panel">
+            <h1>Probability Map</h1>
+            <span class="subtitle">3D Risk Visualization</span>
+
+            <div style="margin-bottom: 20px;">
+                <p style="text-align: right; font-size: 0.7em; color: #666; margin-bottom: 8px; text-transform: uppercase;">Color Scheme</p>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button id="btn-industry" class="active">Industry</button>
+                    <button id="btn-risk">Risk</button>
+                </div>
+            </div>
+
+            <p style="text-align: right; font-size: 0.7em; color: #666; margin-bottom: 8px; text-transform: uppercase;">Legend</p>
+            <div id="legend">
+                <!-- Legend items injected via JS -->
+            </div>
+
+            <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                <p style="font-size: 0.7em; color: #666; text-align: right;">CONTROLS</p>
+                <p style="font-size: 0.8em; color: #aaa; text-align: right;">Left Click: Rotate</p>
+                <p style="font-size: 0.8em; color: #aaa; text-align: right;">Right Click: Pan</p>
+                <p style="font-size: 0.8em; color: #aaa; text-align: right;">Scroll: Zoom</p>
+                <p style="font-size: 0.8em; color: #aaa; text-align: right;">Click Node: Select</p>
+            </div>
+        </div>
+
+        <div id="info-panel" class="hud-panel">
+            <span class="subtitle" id="info-status">ACTIVE LOAN</span>
+            <h2 id="info-company">Company Name</h2>
+            <div style="color: #3498db; font-family: 'Consolas', monospace; font-size: 0.9em; margin-bottom: 15px;" id="info-loan-id">LOAN-ID</div>
+
+            <div class="metric-row">
+                <span class="metric-label">Principal</span>
+                <span class="metric-value" id="info-amount">$0.00</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Interest Rate</span>
+                <span class="metric-value" id="info-rate">0.00%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Maturity Date</span>
+                <span class="metric-value" id="info-maturity">YYYY-MM-DD</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Industry</span>
+                <span class="metric-value" id="info-industry">Sector</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Mgmt Score</span>
+                <span class="metric-value" id="info-score">0.0</span>
+            </div>
+             <div class="metric-row">
+                <span class="metric-label">Collateral</span>
+                <span class="metric-value" id="info-collateral">Type</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA PREPARATION ---
+        const companies = {
+            "COMP001": { name: "Innovatech Solutions", industry: "Technology", score: 8 },
+            "COMP002": { name: "GreenBuild Corp", industry: "Construction", score: 7 },
+            "COMP003": { name: "HealthFirst Pharma", industry: "Pharmaceuticals", score: 9 },
+            "COMP004": { name: "Global Logistics Inc", industry: "Logistics", score: 6 },
+            "COMP005": { name: "AgriGrow Ltd", industry: "Agriculture", score: 7 },
+            "COMP006": { name: "FinServ Pro", industry: "Financial Services", score: 8 },
+            "COMP007": { name: "ManuCore Ltd", industry: "Manufacturing", score: 7 },
+            "COMP008": { name: "RetailR Us", industry: "Other", score: 6 },
+            "COMP009": { name: "New Company A9", industry: "Technology", score: 2.0 },
+            "COMP010": { name: "New Company B10", industry: "Healthcare", score: 1.3 },
+            "COMP011": { name: "New Company C11", industry: "Manufacturing", score: 1.4 },
+            "COMP012": { name: "New Company D12", industry: "Healthcare", score: 3.2 },
+            "COMP013": { name: "New Company E13", industry: "Retail", score: 2.8 },
+            "COMP014": { name: "New Company F14", industry: "Finance", score: 3.8 },
+            "COMP015": { name: "New Company G15", industry: "Finance", score: 1.9 },
+            "COMP016": { name: "New Company H16", industry: "Finance", score: 2.5 },
+            "COMP017": { name: "New Company I17", industry: "Finance", score: 4.2 },
+            "COMP018": { name: "New Company J18", industry: "Manufacturing", score: 4.9 },
+            "COMP019": { name: "New Company K19", industry: "Manufacturing", score: 2.2 },
+            "COMP020": { name: "New Company L20", industry: "Retail", score: 3.8 }
+        };
+
+        const loansData = [
+            { "loan_id": "LOAN7001", "company_id": "COMP001", "loan_amount": 5000000, "currency": "USD", "maturity_date": "2027-08-15", "interest_rate_percentage": 5.5, "collateral_type": "Real Estate" },
+            { "loan_id": "LOAN7002", "company_id": "COMP001", "loan_amount": 2500000, "currency": "USD", "maturity_date": "2026-01-20", "interest_rate_percentage": 6.2, "collateral_type": "Equipment" },
+            { "loan_id": "LOAN7003", "company_id": "COMP002", "loan_amount": 1000000, "currency": "USD", "maturity_date": "2025-03-10", "interest_rate_percentage": 4.8, "collateral_type": "Receivables" },
+            { "loan_id": "LOAN7004", "company_id": "COMP003", "loan_amount": 7500000, "currency": "GBP", "maturity_date": "2028-11-05", "interest_rate_percentage": 5.0, "collateral_type": "Intellectual Property" },
+            { "loan_id": "LOAN7005", "company_id": "COMP004", "loan_amount": 3000000, "currency": "EUR", "maturity_date": "2027-05-20", "interest_rate_percentage": 3.5, "collateral_type": "None" },
+            { "loan_id": "LOAN7006", "company_id": "COMP007", "loan_amount": 15000000, "currency": "JPY", "maturity_date": "2030-07-01", "interest_rate_percentage": 2.8, "collateral_type": "Real Estate" },
+            { "loan_id": "LOAN7007", "company_id": "COMP008", "loan_amount": 500000, "currency": "EUR", "maturity_date": "2025-10-01", "interest_rate_percentage": 7.5, "collateral_type": "Inventory" },
+            { "loan_id": "LOAN7008", "company_id": "COMP002", "principal_amount": 1436769, "currency": "USD", "maturity_date": "2029-01-02", "interest_rate": 0.0893, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7009", "company_id": "COMP007", "principal_amount": 1455459, "currency": "GBP", "maturity_date": "2029-06-11", "interest_rate": 0.0708, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7010", "company_id": "COMP018", "principal_amount": 510566, "currency": "USD", "maturity_date": "2030-02-01", "interest_rate": 0.0844, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7011", "company_id": "COMP016", "principal_amount": 879700, "currency": "USD", "maturity_date": "2031-08-06", "interest_rate": 0.0397, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7012", "company_id": "COMP012", "principal_amount": 509948, "currency": "USD", "maturity_date": "2028-01-01", "interest_rate": 0.0805, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7013", "company_id": "COMP020", "principal_amount": 183227, "currency": "GBP", "maturity_date": "2030-10-07", "interest_rate": 0.0401, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7014", "company_id": "COMP009", "principal_amount": 1661868, "currency": "EUR", "maturity_date": "2030-04-07", "interest_rate": 0.0327, "collateral_type": "None" },
+            { "loan_id": "LOAN7015", "company_id": "COMP010", "principal_amount": 1815108, "currency": "USD", "maturity_date": "2032-02-22", "interest_rate": 0.0499, "collateral_type": "None" },
+            { "loan_id": "LOAN7016", "company_id": "COMP016", "principal_amount": 90845, "currency": "USD", "maturity_date": "2027-09-15", "interest_rate": 0.0246, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7017", "company_id": "COMP005", "principal_amount": 319256, "currency": "EUR", "maturity_date": "2031-10-12", "interest_rate": 0.0622, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7018", "company_id": "COMP013", "principal_amount": 1458629, "currency": "USD", "maturity_date": "2030-08-21", "interest_rate": 0.0398, "collateral_type": "None" },
+            { "loan_id": "LOAN7019", "company_id": "COMP001", "principal_amount": 198883, "currency": "USD", "maturity_date": "2027-02-10", "interest_rate": 0.0888, "collateral_type": "None" },
+            { "loan_id": "LOAN7020", "company_id": "COMP005", "principal_amount": 1566980, "currency": "EUR", "maturity_date": "2031-10-02", "interest_rate": 0.0352, "collateral_type": "None" },
+            { "loan_id": "LOAN7021", "company_id": "COMP004", "principal_amount": 177113, "currency": "USD", "maturity_date": "2030-12-19", "interest_rate": 0.0353, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7022", "company_id": "COMP008", "principal_amount": 1883929, "currency": "USD", "maturity_date": "2027-04-18", "interest_rate": 0.0722, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7023", "company_id": "COMP014", "principal_amount": 1068463, "currency": "USD", "maturity_date": "2031-11-06", "interest_rate": 0.0332, "collateral_type": "None" },
+            { "loan_id": "LOAN7024", "company_id": "COMP018", "principal_amount": 1438044, "currency": "EUR", "maturity_date": "2031-11-28", "interest_rate": 0.0374, "collateral_type": "None" },
+            { "loan_id": "LOAN7025", "company_id": "COMP019", "principal_amount": 1049897, "currency": "USD", "maturity_date": "2032-02-02", "interest_rate": 0.0969, "collateral_type": "None" },
+            { "loan_id": "LOAN7026", "company_id": "COMP013", "principal_amount": 301420, "currency": "GBP", "maturity_date": "2029-03-18", "interest_rate": 0.0266, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7027", "company_id": "COMP011", "principal_amount": 550560, "currency": "GBP", "maturity_date": "2029-06-05", "interest_rate": 0.0716, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7028", "company_id": "COMP019", "principal_amount": 259675, "currency": "GBP", "maturity_date": "2027-04-10", "interest_rate": 0.0412, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7029", "company_id": "COMP015", "principal_amount": 1798489, "currency": "GBP", "maturity_date": "2029-11-04", "interest_rate": 0.0854, "collateral_type": "None" },
+            { "loan_id": "LOAN7030", "company_id": "COMP004", "principal_amount": 1606960, "currency": "GBP", "maturity_date": "2028-03-11", "interest_rate": 0.0369, "collateral_type": "Various Assets" },
+            { "loan_id": "LOAN7031", "company_id": "COMP003", "principal_amount": 1380190, "currency": "USD", "maturity_date": "2031-03-14", "interest_rate": 0.0467, "collateral_type": "None" },
+            { "loan_id": "LOAN7032", "company_id": "COMP014", "principal_amount": 1226306, "currency": "GBP", "maturity_date": "2026-07-23", "interest_rate": 0.0923, "collateral_type": "Various Assets" }
+        ];
+
+        // Process Data
+        const processedData = loansData.map(loan => {
+            const company = companies[loan.company_id] || { name: "Unknown", industry: "Other", score: 5 };
+            const amount = loan.loan_amount || loan.principal_amount || 0;
+            const rate = loan.interest_rate_percentage || (loan.interest_rate * 100) || 0;
+            const maturity = new Date(loan.maturity_date).getTime();
+
+            return {
+                ...loan,
+                company_name: company.name,
+                industry: company.industry,
+                mgmt_score: company.score,
+                normalized_amount: amount,
+                normalized_rate: rate,
+                normalized_maturity: maturity
+            };
+        });
+
+        // Color Palettes
+        const industryColors = {
+            "Technology": 0x3498db,
+            "Construction": 0xe67e22,
+            "Pharmaceuticals": 0x9b59b6,
+            "Logistics": 0xf1c40f,
+            "Agriculture": 0x2ecc71,
+            "Financial Services": 0xe74c3c,
+            "Finance": 0xe74c3c,
+            "Manufacturing": 0x95a5a6,
+            "Retail": 0xd35400,
+            "Healthcare": 0x1abc9c,
+            "Other": 0xecf0f1
+        };
+
+        const riskGradient = (rate) => {
+            // Low rate (2%) -> Green, High rate (10%) -> Red
+            const t = Math.min(Math.max((rate - 2) / 8, 0), 1);
+            const color = new THREE.Color().setHSL(0.3 - (t * 0.3), 1, 0.5);
+            return color;
+        };
+
+        // --- THREE.JS SETUP ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.002);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(50, 40, 100);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0x3498db, 0.5, 100);
+        pointLight.position.set(0, 0, 0);
+        scene.add(pointLight);
+
+        // Objects
+        const objects = [];
+        const geometry = new THREE.SphereGeometry(1, 32, 32);
+
+        // Axis Ranges for Normalization
+        const minRate = 2, maxRate = 10;
+        const minScore = 1, maxScore = 10;
+        // Time: Present to +10 years
+        const now = new Date().getTime();
+        const future = now + (10 * 365 * 24 * 60 * 60 * 1000);
+
+        const group = new THREE.Group();
+        scene.add(group);
+
+        // Helper Grids
+        const gridHelper = new THREE.GridHelper(200, 20, 0x333333, 0x111111);
+        gridHelper.position.y = -20;
+        scene.add(gridHelper);
+
+        processedData.forEach(item => {
+            const material = new THREE.MeshStandardMaterial({
+                color: industryColors[item.industry] || 0xffffff,
+                roughness: 0.2,
+                metalness: 0.8,
+                emissive: 0x000000
+            });
+
+            const sphere = new THREE.Mesh(geometry, material);
+
+            // Positioning
+            // X: Interest Rate (Risk) -50 to 50
+            const x = THREE.MathUtils.mapLinear(item.normalized_rate, minRate, maxRate, -50, 50);
+
+            // Y: Mgmt Score (Quality) -20 to 40 (Higher score is higher up)
+            const y = THREE.MathUtils.mapLinear(item.mgmt_score, minScore, maxScore, -10, 30);
+
+            // Z: Maturity (Time) -50 to 50
+            const z = THREE.MathUtils.mapLinear(item.normalized_maturity, now, future, -40, 40);
+
+            sphere.position.set(x, y, z);
+
+            // Scale based on loan amount (log scale)
+            const scale = Math.log10(item.normalized_amount) * 0.8;
+            sphere.scale.set(scale, scale, scale);
+
+            sphere.userData = item; // Store data for raycasting
+
+            group.add(sphere);
+            objects.push(sphere);
+        });
+
+        // Add some connecting lines for "Network" feel (optional)
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x3498db, transparent: true, opacity: 0.1 });
+        const lineGeo = new THREE.BufferGeometry();
+        const positions = [];
+        // Connect nearby nodes
+        for(let i=0; i<objects.length; i++) {
+             for(let j=i+1; j<objects.length; j++) {
+                 if (objects[i].position.distanceTo(objects[j].position) < 25) {
+                     positions.push(objects[i].position.x, objects[i].position.y, objects[i].position.z);
+                     positions.push(objects[j].position.x, objects[j].position.y, objects[j].position.z);
+                 }
+             }
+        }
+        lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        const lines = new THREE.LineSegments(lineGeo, lineMaterial);
+        group.add(lines);
+
+
+        // --- INTERACTION ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoveredObj = null;
+
+        window.addEventListener('mousemove', onMouseMove, false);
+        window.addEventListener('resize', onWindowResize, false);
+        window.addEventListener('click', onMouseClick, false);
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Tooltip pos
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.left = event.clientX + 10 + 'px';
+            tooltip.style.top = event.clientY + 10 + 'px';
+        }
+
+        function onMouseClick(event) {
+             if (hoveredObj) {
+                 selectObject(hoveredObj);
+             }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objects);
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (hoveredObj !== obj) {
+                    if (hoveredObj) hoveredObj.material.emissive.setHex(0x000000);
+                    hoveredObj = obj;
+                    hoveredObj.material.emissive.setHex(0x444444);
+                    document.body.style.cursor = 'pointer';
+
+                    // Show Tooltip
+                    const d = obj.userData;
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.innerHTML = `<strong>${d.company_name}</strong><br>${d.currency} ${d.normalized_amount.toLocaleString()}`;
+                    tooltip.style.display = 'block';
+                }
+            } else {
+                if (hoveredObj) {
+                    hoveredObj.material.emissive.setHex(0x000000);
+                    hoveredObj = null;
+                    document.body.style.cursor = 'default';
+                    document.getElementById('tooltip').style.display = 'none';
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- UI LOGIC ---
+        function selectObject(obj) {
+            const d = obj.userData;
+            document.getElementById('info-company').innerText = d.company_name;
+            document.getElementById('info-loan-id').innerText = d.loan_id;
+            document.getElementById('info-amount').innerText = d.currency + " " + d.normalized_amount.toLocaleString();
+            document.getElementById('info-rate').innerText = d.normalized_rate.toFixed(2) + "%";
+            document.getElementById('info-maturity').innerText = new Date(d.normalized_maturity).toISOString().split('T')[0];
+            document.getElementById('info-industry').innerText = d.industry;
+            document.getElementById('info-score').innerText = d.mgmt_score;
+            document.getElementById('info-collateral').innerText = d.collateral_type;
+
+            document.getElementById('info-panel').classList.add('visible');
+
+            // Stop auto rotation when user interacts
+            controls.autoRotate = false;
+
+            // Zoom to object
+            /*
+            new TWEEN.Tween(camera.position)
+                .to({ x: obj.position.x + 20, y: obj.position.y + 10, z: obj.position.z + 20 }, 1000)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .start();
+            controls.target.set(obj.position.x, obj.position.y, obj.position.z);
+            */
+        }
+
+        // Coloring Modes
+        document.getElementById('btn-industry').addEventListener('click', () => {
+            document.getElementById('btn-industry').classList.add('active');
+            document.getElementById('btn-risk').classList.remove('active');
+            updateLegend('industry');
+
+            objects.forEach(obj => {
+                const color = industryColors[obj.userData.industry] || 0xffffff;
+                obj.material.color.setHex(color);
+            });
+        });
+
+        document.getElementById('btn-risk').addEventListener('click', () => {
+            document.getElementById('btn-risk').classList.add('active');
+            document.getElementById('btn-industry').classList.remove('active');
+            updateLegend('risk');
+
+            objects.forEach(obj => {
+                const color = riskGradient(obj.userData.normalized_rate);
+                obj.material.color.copy(color);
+            });
+        });
+
+        function updateLegend(mode) {
+            const container = document.getElementById('legend');
+            container.innerHTML = '';
+
+            if (mode === 'industry') {
+                Object.keys(industryColors).forEach(key => {
+                    const div = document.createElement('div');
+                    div.className = 'legend-item';
+                    const colorHex = '#' + industryColors[key].toString(16).padStart(6, '0');
+                    div.innerHTML = `${key} <span class="dot" style="background-color: ${colorHex}"></span>`;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = `
+                    <div class="legend-item">Low Risk (2%) <span class="dot" style="background-color: #2ecc71"></span></div>
+                    <div class="legend-item">High Risk (10%) <span class="dot" style="background-color: #e74c3c"></span></div>
+                `;
+            }
+        }
+
+        // Initial Setup
+        document.getElementById('loading').style.display = 'none';
+        updateLegend('industry');
+        animate();
+
+    </script>
 </body>
 </html>
