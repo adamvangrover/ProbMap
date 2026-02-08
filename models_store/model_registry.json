@@ -2,6 +2,44 @@
     "PDModel": [
         {
             "model_name": "PDModel",
+            "model_version": "20260128013632",
+            "model_path": "models_store/pd_model.joblib",
+            "metrics": {
+                "train_accuracy": 1.0,
+                "test_accuracy": 0.75,
+                "test_roc_auc": 0.4066666666666667
+            },
+            "parameters": {
+                "bootstrap": true,
+                "ccp_alpha": 0.0,
+                "class_weight": null,
+                "criterion": "gini",
+                "max_depth": null,
+                "max_features": "sqrt",
+                "max_leaf_nodes": null,
+                "max_samples": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "monotonic_cst": null,
+                "n_estimators": 100,
+                "n_jobs": null,
+                "oob_score": false,
+                "random_state": 42,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "RandomForestClassifier"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2026-01-28T01:36:32.419253+00:00",
+            "status": "registered"
+        },
+        {
+            "model_name": "PDModel",
             "model_version": "20250914233755",
             "model_path": "models_store/pd_model.joblib",
             "metrics": {
@@ -990,6 +1028,47 @@
         }
     ],
     "LGDModel": [
+        {
+            "model_name": "LGDModel",
+            "model_version": "20260128013632",
+            "model_path": "models_store/lgd_model.joblib",
+            "metrics": {
+                "train_mse": 6.039189023742096e-07,
+                "test_mse": 0.0015150133945284906,
+                "train_rmse": 0.0007771221926918634,
+                "test_rmse": 0.038923172976113994
+            },
+            "parameters": {
+                "alpha": 0.9,
+                "ccp_alpha": 0.0,
+                "criterion": "friedman_mse",
+                "init": null,
+                "learning_rate": 0.1,
+                "loss": "squared_error",
+                "max_depth": 3,
+                "max_features": null,
+                "max_leaf_nodes": null,
+                "min_impurity_decrease": 0.0,
+                "min_samples_leaf": 1,
+                "min_samples_split": 2,
+                "min_weight_fraction_leaf": 0.0,
+                "n_estimators": 100,
+                "n_iter_no_change": null,
+                "random_state": 42,
+                "subsample": 1.0,
+                "tol": 0.0001,
+                "validation_fraction": 0.1,
+                "verbose": 0,
+                "warm_start": false
+            },
+            "tags": {
+                "stage": "training",
+                "model_type": "GradientBoostingRegressor"
+            },
+            "source_code_version": "N/A",
+            "registration_timestamp": "2026-01-28T01:36:32.544668+00:00",
+            "status": "registered"
+        },
         {
             "model_name": "LGDModel",
             "model_version": "20250914233755",

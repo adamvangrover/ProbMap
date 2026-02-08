@@ -1,0 +1,123 @@
+{
+    "system_version": "1.0.0-final-demo",
+    "generation_timestamp": "2026-01-27T02:30:41.700367+00:00",
+    "data_sources": [
+        {
+            "name": "Company Data",
+            "path": "data/sample_companies.csv",
+            "description": "CSV file containing sample corporate entity data."
+        },
+        {
+            "name": "Loan Agreements",
+            "path": "data/sample_loans.json",
+            "description": "JSON file containing sample loan agreement data."
+        },
+        {
+            "name": "Financial Statements",
+            "path": "data/sample_financial_statements.json",
+            "description": "JSON file containing sample financial statements."
+        },
+        {
+            "name": "Default Events",
+            "path": "data/sample_default_events.json",
+            "description": "JSON file containing sample default event data."
+        },
+        {
+            "name": "PD Model Reference Features",
+            "path": "data/reference_pd_features.csv",
+            "description": "CSV file with reference features for PD model data drift detection."
+        }
+    ],
+    "active_models": [
+        {
+            "model_name": "PDModel",
+            "version": "20250914170741",
+            "path": "models_store/pd_model.joblib",
+            "status": "production"
+        }
+    ],
+    "key_services": [
+        {
+            "service_name": "KnowledgeBaseService",
+            "module_path": "src.data_management.knowledge_base"
+        },
+        {
+            "service_name": "KnowledgeGraphService",
+            "module_path": "src.data_management.knowledge_graph"
+        },
+        {
+            "service_name": "PDModel",
+            "module_path": "src.risk_models.pd_model"
+        },
+        {
+            "service_name": "LGDModel",
+            "module_path": "src.risk_models.lgd_model"
+        },
+        {
+            "service_name": "PricingModel",
+            "module_path": "src.risk_models.pricing_model"
+        },
+        {
+            "service_name": "RiskMapService",
+            "module_path": "src.risk_map.risk_map_service"
+        },
+        {
+            "service_name": "ModelRegistry",
+            "module_path": "src.mlops.model_registry"
+        },
+        {
+            "service_name": "ModelMonitor",
+            "module_path": "src.mlops.monitoring"
+        },
+        {
+            "service_name": "ScenarioGenerator",
+            "module_path": "src.simulation.scenario_generator"
+        },
+        {
+            "service_name": "StressTester",
+            "module_path": "src.simulation.stress_tester"
+        }
+    ],
+    "output_files": [
+        {
+            "name": "Orchestration Manifest",
+            "path": "output/orchestration_manifest.json",
+            "description": "This manifest file, providing a snapshot of system components and outputs."
+        },
+        {
+            "name": "JSON-LD Risk Profiles",
+            "path": "output/risk_profiles.jsonld",
+            "description": "Sample company risk profiles in JSON-LD format, generated from the risk map overview."
+        },
+        {
+            "name": "System Overview HTML Page",
+            "path": "index.html",
+            "description": "Main HTML overview page with links and embedded notebook snapshots."
+        },
+        {
+            "name": "Conceptual Portfolio Risk/Return Plot",
+            "path": "output/plot_portfolio_risk_return.png",
+            "description": "Static plot from analysis notebook showing conceptual portfolio risk vs. return."
+        },
+        {
+            "name": "Conceptual Peer Comparison Plot",
+            "path": "output/plot_peer_comparison.png",
+            "description": "Static plot from analysis notebook showing conceptual company vs. peer metrics."
+        },
+        {
+            "name": "Consolidated Data Export (Excel)",
+            "path": "output/consolidated_data_export.xlsx",
+            "description": "Excel file with key data tables: Portfolio Overview, Sector Summary, Country Summary, Companies KB, Synthetic Equities & Commodities."
+        },
+        {
+            "name": "Excel Data Exporter Notebook",
+            "path": "notebooks/03_excel_data_exporter.ipynb",
+            "description": "Jupyter notebook to generate and preview the consolidated Excel data export."
+        },
+        {
+            "name": "Final Excel Summary (Markdown)",
+            "path": "output/final_excel_summary.md",
+            "description": "Markdown file summarizing the content and structure of the consolidated_data_export.xlsx."
+        }
+    ]
+}

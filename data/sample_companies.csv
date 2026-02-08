@@ -1,32 +1,51 @@
-company_id,company_name,industry_sector,country_iso_code,founded_date,revenue_usd_millions,subsidiaries,suppliers,customers,loan_agreement_ids,financial_statement_ids,management_quality_score
-COMP001,Innovatech Solutions,Technology,USA,2010-05-15,150.75,COMP901;COMP902,,CUST001;CUST002,LOAN7001;LOAN7002,FS001;FS002,8
-COMP002,GreenBuild Corp,Construction,CAN,2005-01-20,88.20,,SUPP801,CUST003,LOAN7003,FS003;FS004,7
-COMP003,HealthFirst Pharma,Pharmaceuticals,GBR,1998-11-01,320.50,COMP903,,CUST004;CUST005,LOAN7004,FS005,9
-COMP004,Global Logistics Inc,Logistics,DEU,2012-07-30,210.00,,,LOAN7005,FS006,6
-COMP005,AgriGrow Ltd,Agriculture,USA,2000-03-10,65.40,,SUPP802;SUPP803,,FS007,7
-COMP006,FinServ Pro,Financial Services,USA,2018-02-20,45.50,,,,FS008,8
-COMP007,ManuCore Ltd,Manufacturing,JPN,2002-06-10,120.00,COMP904,SUPP804,,LOAN7006,FS009;FS010,7
-COMP008,RetailR Us,Other,FRA,2015-09-01,75.25,,,LOAN7007,FS011,6
-
-
 company_id,company_name,industry,country,year_founded,status,management_quality_score,loan_agreement_ids,industry_sector,country_iso_code,founded_date,revenue_usd_millions,subsidiaries,suppliers,customers,financial_statement_ids
-COMP001,Innovatech Solutions,,,,,8,LOAN7001;LOAN7002;LOAN7019,Technology,USA,2010-05-15,150.75,COMP901;COMP902,,CUST001;CUST002,FS001;FS002
-COMP002,GreenBuild Corp,,,,,7,LOAN7003;LOAN7008,Construction,CAN,2005-01-20,88.20,,SUPP801,CUST003,FS003;FS004
-COMP003,HealthFirst Pharma,,,,,9,LOAN7004;LOAN7031,Pharmaceuticals,GBR,1998-11-01,320.50,COMP903,,CUST004;CUST005,FS005
-COMP004,Global Logistics Inc,,,,,,FS006;LOAN7021;LOAN7030,Logistics,DEU,2012-07-30,210.00,,,LOAN7005,6
-COMP005,AgriGrow Ltd,,,,,,FS007;LOAN7017;LOAN7020,Agriculture,USA,2000-03-10,65.40,,SUPP802;SUPP803,,7
-COMP006,FinServ Pro,,,,,,FS008,Financial Services,USA,2018-02-20,45.50,,,,8
-COMP007,ManuCore Ltd,,,,,7,LOAN7006;LOAN7009,Manufacturing,JPN,2002-06-10,120.00,COMP904,SUPP804,,FS009;FS010
-COMP008,RetailR Us,,,,,,FS011;LOAN7022,Other,FRA,2015-09-01,75.25,,,LOAN7007,6
-COMP009,New Company A9,Technology,USA,1997,Operating,2.0,LOAN7014,,,,,,,,
-COMP010,New Company B10,Healthcare,USA,2014,Operating,1.3,LOAN7015,,,,,,,,
-COMP011,New Company C11,Manufacturing,USA,1981,Operating,1.4,LOAN7027,,,,,,,,
-COMP012,New Company D12,Healthcare,France,1981,Operating,3.2,LOAN7012,,,,,,,,
-COMP013,New Company E13,Retail,Germany,1994,Operating,2.8,LOAN7018;LOAN7026,,,,,,,,
-COMP014,New Company F14,Finance,USA,1990,Operating,3.8,LOAN7023;LOAN7032,,,,,,,,
-COMP015,New Company G15,Finance,UK,1989,Operating,1.9,LOAN7029,,,,,,,,
-COMP016,New Company H16,Finance,USA,1985,Operating,2.5,LOAN7011;LOAN7016,,,,,,,,
-COMP017,New Company I17,Finance,UK,1996,Operating,4.2,,,,,,,,,
-COMP018,New Company J18,Manufacturing,France,1987,Operating,4.9,LOAN7010;LOAN7024,,,,,,,,
-COMP019,New Company K19,Manufacturing,USA,2015,Operating,2.2,LOAN7025;LOAN7028,,,,,,,,
-COMP020,New Company L20,Retail,UK,1992,Operating,3.8,LOAN7013,,,,,,,,
+COMP009,New Company A9,Construction,USA,1997,Operating,3,LOAN7024,Construction,USA,1997-01-01,130.0,,,,
+COMP010,New Company B10,Construction,France,1985,Operating,1,LOAN7036;LOAN7067;LOAN7098,Construction,FRA,1985-01-01,299.34,,,,
+COMP011,New Company C11,Technology,USA,1993,Operating,10,LOAN7016;LOAN7054;LOAN7095,Technology,USA,1993-01-01,124.0,,,,
+COMP012,New Company D12,Technology,France,1992,Operating,9,LOAN7014,Technology,FRA,1992-01-01,360.85,,,,
+COMP013,New Company E13,Manufacturing,Canada,2008,Operating,1,LOAN7009;LOAN7048;LOAN7066;LOAN7075,Manufacturing,CAN,2008-01-01,298.74,,,,
+COMP014,New Company F14,Pharmaceuticals,Germany,2001,Operating,4,LOAN7025;LOAN7043;LOAN7103,Pharmaceuticals,DEU,2001-01-01,146.16,,,,
+COMP015,New Company G15,Financial Services,USA,1985,Operating,6,LOAN7013;LOAN7050,Financial Services,USA,1985-01-01,196.16,,,,
+COMP016,New Company H16,Financial Services,France,1996,Operating,8,,Financial Services,FRA,1996-01-01,405.49,,,,
+COMP017,New Company I17,Construction,Germany,1985,Operating,10,LOAN7047;LOAN7064;LOAN7089,Construction,DEU,1985-01-01,280.5,,,,
+COMP018,New Company J18,Financial Services,France,1992,Operating,1,LOAN7079,Financial Services,FRA,1992-01-01,355.24,,,,
+COMP019,New Company K19,Logistics,UK,1985,Operating,2,,Logistics,GBR,1985-01-01,429.11,,,,
+COMP020,New Company L20,Manufacturing,UK,2009,Operating,6,LOAN7017;LOAN7083,Manufacturing,GBR,2009-01-01,321.49,,,,
+COMP021,New Company M21,Pharmaceuticals,UK,2002,Operating,5,LOAN7019;LOAN7021;LOAN7038,Pharmaceuticals,GBR,2002-01-01,112.66,,,,
+COMP022,New Company N22,Construction,France,1990,Operating,4,,Construction,FRA,1990-01-01,271.73,,,,
+COMP023,New Company O23,Pharmaceuticals,Germany,2004,Operating,9,LOAN7072,Pharmaceuticals,DEU,2004-01-01,142.27,,,,
+COMP024,New Company P24,Logistics,UK,1983,Operating,1,LOAN7026;LOAN7044;LOAN7059;LOAN7063;LOAN7080,Logistics,GBR,1983-01-01,122.23,,,,
+COMP025,New Company Q25,Financial Services,Germany,1997,Operating,10,LOAN7020;LOAN7057;LOAN7065,Financial Services,DEU,1997-01-01,42.43,,,,
+COMP026,New Company R26,Financial Services,Canada,2011,Operating,8,,Financial Services,CAN,2011-01-01,203.86,,,,
+COMP027,New Company S27,Pharmaceuticals,UK,1988,Operating,9,LOAN7023;LOAN7046,Pharmaceuticals,GBR,1988-01-01,130.85,,,,
+COMP028,New Company T28,Agriculture,France,2007,Operating,7,LOAN7032;LOAN7053;LOAN7070;LOAN7073;LOAN7078;LOAN7099,Agriculture,FRA,2007-01-01,449.93,,,,
+COMP029,New Company U29,Financial Services,Canada,1988,Operating,2,LOAN7042;LOAN7086,Financial Services,CAN,1988-01-01,259.67,,,,
+COMP030,New Company V30,Technology,USA,1989,Operating,7,LOAN7056,Technology,USA,1989-01-01,317.45,,,,
+COMP031,New Company W31,Construction,Germany,2004,Operating,8,LOAN7090;LOAN7107,Construction,DEU,2004-01-01,301.99,,,,
+COMP032,New Company X32,Agriculture,France,1980,Operating,2,LOAN7039;LOAN7074;LOAN7093,Agriculture,FRA,1980-01-01,343.34,,,,
+COMP033,New Company Y33,Agriculture,UK,1987,Operating,3,,Agriculture,GBR,1987-01-01,153.82,,,,
+COMP034,New Company Z34,Other,USA,1996,Operating,3,LOAN7033,Other,USA,1996-01-01,486.23,,,,
+COMP035,New Company [35,Construction,UK,2012,Operating,3,LOAN7031,Construction,GBR,2012-01-01,308.4,,,,
+COMP036,New Company \36,Financial Services,Canada,2014,Operating,9,LOAN7087;LOAN7088;LOAN7091;LOAN7094,Financial Services,CAN,2014-01-01,477.21,,,,
+COMP037,New Company ]37,Technology,France,2000,Operating,2,LOAN7051,Technology,FRA,2000-01-01,249.42,,,,
+COMP038,New Company ^38,Financial Services,UK,1995,Operating,10,LOAN7028;LOAN7034;LOAN7040;LOAN7069;LOAN7081,Financial Services,GBR,1995-01-01,38.38,,,,
+COMP039,New Company _39,Construction,USA,2011,Operating,9,LOAN7029;LOAN7035;LOAN7102,Construction,USA,2011-01-01,409.85,,,,
+COMP040,New Company `40,Pharmaceuticals,Canada,2010,Operating,3,LOAN7060;LOAN7096,Pharmaceuticals,CAN,2010-01-01,473.96,,,,
+COMP041,New Company a41,Agriculture,France,2007,Operating,9,LOAN7104,Agriculture,FRA,2007-01-01,482.54,,,,
+COMP042,New Company b42,Logistics,UK,2005,Operating,6,LOAN7084,Logistics,GBR,2005-01-01,497.62,,,,
+COMP043,New Company c43,Other,France,2008,Operating,4,LOAN7012;LOAN7030,Other,FRA,2008-01-01,69.29,,,,
+COMP044,New Company d44,Construction,UK,1981,Operating,4,LOAN7015;LOAN7077;LOAN7082;LOAN7106,Construction,GBR,1981-01-01,298.27,,,,
+COMP045,New Company e45,Logistics,USA,1984,Operating,1,LOAN7011;LOAN7055;LOAN7092,Logistics,USA,1984-01-01,356.84,,,,
+COMP046,New Company f46,Logistics,USA,1982,Operating,2,LOAN7008;LOAN7062,Logistics,USA,1982-01-01,431.22,,,,
+COMP047,New Company g47,Logistics,UK,2011,Operating,3,LOAN7037;LOAN7049;LOAN7061,Logistics,GBR,2011-01-01,114.98,,,,
+COMP048,New Company h48,Other,Canada,2010,Operating,4,LOAN7068;LOAN7105,Other,CAN,2010-01-01,405.67,,,,
+COMP049,New Company i49,Construction,USA,2007,Operating,7,LOAN7052;LOAN7058;LOAN7101,Construction,USA,2007-01-01,183.61,,,,
+COMP050,New Company j50,Other,USA,1986,Operating,6,LOAN7100,Other,USA,1986-01-01,39.7,,,,
+COMP051,New Company k51,Construction,Canada,1992,Operating,8,LOAN7022;LOAN7071;LOAN7085,Construction,CAN,1992-01-01,103.2,,,,
+COMP052,New Company l52,Pharmaceuticals,Germany,1991,Operating,4,,Pharmaceuticals,DEU,1991-01-01,146.49,,,,
+COMP053,New Company m53,Construction,Germany,2015,Operating,9,LOAN7018,Construction,DEU,2015-01-01,57.98,,,,
+COMP054,New Company n54,Technology,USA,1995,Operating,8,LOAN7010,Technology,USA,1995-01-01,91.49,,,,
+COMP055,New Company o55,Other,Canada,2005,Operating,3,LOAN7041;LOAN7045,Other,CAN,2005-01-01,452.2,,,,
+COMP056,New Company p56,Manufacturing,USA,2004,Operating,8,LOAN7076;LOAN7097,Manufacturing,USA,2004-01-01,139.95,,,,
+COMP057,New Company q57,Agriculture,Germany,2015,Operating,8,LOAN7027,Agriculture,DEU,2015-01-01,334.32,,,,
+COMP058,New Company r58,Pharmaceuticals,Canada,1998,Operating,1,,Pharmaceuticals,CAN,1998-01-01,116.67,,,,
