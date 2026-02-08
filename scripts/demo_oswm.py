@@ -5,6 +5,7 @@ import numpy as np
 import logging
 
 # Add src to python path to import modules
+# Assuming file is in /demo/ and src is in /src/
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 from simulation.oswm import OneShotWorldModel, SyntheticCreditPrior, OSWMTrainer
@@ -28,6 +29,8 @@ def main():
     logger.info(f"Using device: {device}")
 
     # Initialize components
+    # The feature branch uses a dedicated Prior class and Trainer, replacing
+    # the manual data generation loops found in the old main branch.
     prior = SyntheticCreditPrior(state_dim=STATE_DIM, hidden_dim=32)
     model = OneShotWorldModel(state_dim=STATE_DIM, d_model=D_MODEL, nhead=NHEAD, num_layers=NUM_LAYERS).to(device)
     trainer = OSWMTrainer(model, prior, lr=1e-3)

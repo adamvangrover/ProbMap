@@ -6,7 +6,7 @@ import pandas as pd
 from src.risk_models.pd_model import PDModel
 from src.risk_models.lgd_model import LGDModel
 from src.data_management.knowledge_base import KnowledgeBaseService # For getting original data if needed
-# from src.risk_map.risk_map_service import RiskMapService # Not directly used here
+from src.data_management.knowledge_graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +19,13 @@ class StressTester:
     def __init__(self,
                  pd_model: PDModel,
                  lgd_model: LGDModel,
-                 kb_service: KnowledgeBaseService # Used to get full data for re-prediction
+                 kb_service: KnowledgeBaseService, # Used to get full data for re-prediction
+                 kg_service: Optional[KnowledgeGraphService] = None
                 ):
         self.pd_model = pd_model
         self.lgd_model = lgd_model
         self.kb_service = kb_service # To fetch original company/loan details
+        self.kg_service = kg_service
 
         # Ensure models are loaded
         if self.pd_model.model is None:
@@ -177,6 +179,94 @@ class StressTester:
 
         logger.info(f"Stress test for '{scenario_name}' complete. Total Stressed EL: {total_stressed_el:.2f}")
         return results_summary
+
+    def run_graph_stress_test(self, initial_shock_entities: List[str], decay_factor: float = 0.5) -> Dict[str, Any]:
+        """
+        Simulates a 'Random Dark Forest' scenario where shocks propagate through the network.
+
+        Args:
+            initial_shock_entities (List[str]): List of company_ids that initially default or suffer severe shock.
+            decay_factor (float): How much the shock reduces as it propagates (0.0 to 1.0).
+
+        Returns:
+            Dict[str, Any]: Results of the contagion simulation.
+        """
+        if not self.kg_service or not self.kg_service.graph:
+            logger.error("Knowledge Graph Service not available. Cannot run graph stress test.")
+            return {"error": "KG Service missing"}
+
+        logger.info(f"Running Graph Stress Test (Contagion). Initial shocks: {initial_shock_entities}")
+
+        # 1. Identify affected nodes (BFS/Propagation)
+        affected_nodes = {} # node_id -> shock_severity (0.0 to 1.0)
+
+        # Initialize queue with primary shocks (severity 1.0)
+        queue = [(entity_id, 1.0) for entity_id in initial_shock_entities]
+        visited = set(initial_shock_entities)
+
+        while queue:
+            current_node, severity = queue.pop(0)
+            affected_nodes[current_node] = max(affected_nodes.get(current_node, 0.0), severity)
+
+            if severity < 0.1: # Stop if shock is negligible
+                continue
+
+            # Propagate to neighbors
+            if self.kg_service.graph.has_node(current_node):
+                neighbors = self.kg_service.graph.neighbors(current_node)
+                for neighbor in neighbors:
+                    if neighbor not in visited:
+                        # Simple logic: Shock transmits to connected entities
+                        # In a real system, we'd check edge type (e.g., Supplier->Customer vs Customer->Supplier)
+                        transmitted_severity = severity * decay_factor
+                        queue.append((neighbor, transmitted_severity))
+                        visited.add(neighbor)
+
+        logger.info(f"Contagion complete. Affected {len(affected_nodes)} entities.")
+
+        # 2. Apply shocks to portfolio data
+        # We simulate this by creating a scenario where affected companies have revenue reduced
+        # proportional to shock severity.
+
+        base_loans = self.kb_service.get_all_loans()
+        shocked_data = []
+
+        for loan in base_loans:
+            company_id = loan.company_id
+            shock_severity = affected_nodes.get(company_id, 0.0)
+
+            company = self.kb_service.get_company_profile(company_id)
+            if not company: continue
+
+            # Shock logic:
+            # If severity 1.0 (default), revenue -> 0, condition -> 0
+            # If severity 0.5, revenue -> 50%
+
+            revenue_multiplier = max(0.0, 1.0 - shock_severity)
+
+            shocked_item = {
+                'loan_id': loan.loan_id,
+                'company_id': company_id,
+                'company_revenue_usd_millions': (company.revenue_usd_millions or 0) * revenue_multiplier,
+                'economic_condition_indicator': (loan.economic_condition_indicator or 0.5) * revenue_multiplier,
+                # Pass through other fields needed for models
+                'interest_rate_percentage': loan.interest_rate_percentage,
+                'collateral_type': loan.collateral_type.value if loan.collateral_type else "None",
+                'loan_amount_usd': loan.loan_amount,
+                'seniority_of_debt': str(loan.seniority_of_debt) if loan.seniority_of_debt else 'Unknown'
+            }
+            shocked_data.append(shocked_item)
+
+        shocked_df = pd.DataFrame(shocked_data)
+
+        # 3. Re-run standard stress test with this "Contagion" scenario data
+        scenario_payload = {
+            "name": "Graph Contagion Simulation",
+            "description": f"Contagion starting from {initial_shock_entities} with decay {decay_factor}",
+            "data": shocked_df
+        }
+
+        return self.run_stress_test_on_portfolio(scenario_payload)
 
 
 if __name__ == "__main__":
