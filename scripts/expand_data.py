@@ -4,8 +4,8 @@ import random
 from datetime import datetime, timedelta
 
 # Configuration
-NUM_NEW_COMPANIES = 12
-NUM_NEW_LOANS = 25  # Approximate, may vary slightly
+NUM_NEW_COMPANIES = 50
+NUM_NEW_LOANS = 100  # Approximate, may vary slightly
 YEARS_FINANCIAL_STATEMENTS = [2022, 2023] # Generate for 2-3 years
 
 # --- Data Generation Functions ---
@@ -56,15 +56,33 @@ def generate_new_companies(num_companies, max_existing_comp_id_num):
     for i in range(num_companies):
         current_max_id_num += 1
         company_id = f"COMP{current_max_id_num:03d}"
+        # Use valid IndustrySector enum values
+        industry_choice = random.choice([
+            "Technology", "Construction", "Pharmaceuticals", "Logistics",
+            "Agriculture", "Financial Services", "Manufacturing", "Other"
+        ])
+        country_choice = random.choice(["USA", "Canada", "UK", "Germany", "France"])
+        country_map = {"USA": "USA", "Canada": "CAN", "UK": "GBR", "Germany": "DEU", "France": "FRA"}
+        year_founded = random.randint(1980, 2015)
+
         new_companies.append({
             "company_id": company_id,
             "company_name": f"New Company {chr(65 + i)}{current_max_id_num}",
-            "industry": random.choice(["Technology", "Healthcare", "Finance", "Manufacturing", "Retail"]),
-            "country": random.choice(["USA", "Canada", "UK", "Germany", "France"]),
-            "year_founded": random.randint(1980, 2015),
+            "industry_sector": industry_choice,
+            "country_iso_code": country_map[country_choice],
+            "founded_date": f"{year_founded}-01-01",
+            "revenue_usd_millions": round(random.uniform(10, 500), 2),
+            "management_quality_score": random.randint(1, 10), # Integer 1-10
+            "loan_agreement_ids": [],
+            # Legacy/Optional fields
+            "industry": industry_choice,
+            "country": country_choice,
+            "year_founded": year_founded,
             "status": "Operating",
-            "management_quality_score": round(random.uniform(1, 5), 1),
-            "loan_agreement_ids": []
+            "subsidiaries": "",
+            "suppliers": "",
+            "customers": "",
+            "financial_statement_ids": ""
         })
     return new_companies
 
@@ -91,17 +109,17 @@ def generate_new_loans(num_loans, max_existing_loan_id_num, all_company_ids):
             "loan_id": loan_id,
             "company_id": company_id,
             "loan_type": random.choice(loan_types),
-            "principal_amount": principal_amount,
+            "loan_amount": principal_amount, # Renamed from principal_amount
             "currency": random.choice(currencies),
-            "interest_rate": round(random.uniform(0.02, 0.10), 4),
+            "interest_rate_percentage": round(random.uniform(2.0, 10.0), 2), # Renamed and scaled to %
             "origination_date": origination_date,
             "maturity_date": maturity_date,
-            "collateral_type": "Various Assets" if random.random() > 0.3 else "None",
-            "collateral_value": int(principal_amount * random.uniform(0.8, 1.5)) if random.random() > 0.3 else 0,
+            "collateral_type": "Real Estate" if random.random() > 0.5 else "None", # Simplified to match enum often used
+            "collateral_value_usd": int(principal_amount * random.uniform(0.8, 1.5)) if random.random() > 0.3 else 0, # Renamed
             "covenants_compliance": "Compliant",
             "status": random.choice(statuses),
             "seniority_of_debt": random.choice(seniority_levels),
-            "economic_condition_indicator": random.choice(economic_conditions)
+            "economic_condition_indicator": random.uniform(0.0, 1.0) # Changed to float for Pydantic validation
         })
     return new_loans
 
@@ -148,6 +166,11 @@ def generate_financial_statements(max_existing_fs_id_num, company_ids, target_ye
                 "interest_expense": interest_expense,
                 "taxes": taxes,
                 "net_income": net_income,
+                "total_assets_usd": current_assets, # Renamed
+                "total_liabilities_usd": total_liabilities, # Renamed
+                "net_equity_usd": total_equity, # Renamed
+                "reporting_period_months": 12, # Added missing field
+                # Keep other fields for potential future use or context
                 "total_assets": current_assets,
                 "total_liabilities": total_liabilities,
                 "total_equity": total_equity,
@@ -333,8 +356,15 @@ def main():
     new_default_events_data = generate_default_events(max_de_id_num, selected_loan_ids_for_default, all_loans_for_default_gen)
     print(f"Generated {len(new_default_events_data)} new default events.")
 
-    print("\nAppending new data...")
+    # Update default_status for loans that have a default event
+    defaulted_loan_ids = set(selected_loan_ids_for_default)
     updated_loans = existing_loans + new_loans_data
+
+    for loan in updated_loans:
+        if loan['loan_id'] in defaulted_loan_ids:
+            loan['default_status'] = True
+
+    print("\nAppending new data...")
     updated_financial_statements = existing_financial_statements + new_fs_data
     updated_default_events = existing_default_events + new_default_events_data
 

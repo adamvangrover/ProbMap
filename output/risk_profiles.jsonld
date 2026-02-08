@@ -1,0 +1,91 @@
+{
+    "@context": {
+        "schema": "https://schema.org/",
+        "cr": "http://example.com/creditriskontology#",
+        "CorporateEntity": "cr:CorporateEntity",
+        "company_id": "schema:identifier",
+        "company_name": "schema:name",
+        "industry_sector": "schema:industry",
+        "country_iso_code": "schema:addressCountry",
+        "hasRiskProfile": "cr:hasRiskProfile",
+        "RiskProfile": "cr:RiskProfile",
+        "pd_estimate": "cr:probabilityOfDefault",
+        "lgd_estimate": "cr:lossGivenDefault",
+        "expected_loss_usd": "cr:expectedLoss",
+        "management_quality_score": "cr:managementQualityScore",
+        "kg_degree_centrality": "cr:degreeCentrality",
+        "kg_num_suppliers": "cr:numberOfSuppliers",
+        "kg_num_customers": "cr:numberOfCustomers"
+    },
+    "@graph": [
+        {
+            "@type": "CorporateEntity",
+            "company_id": "COMP001",
+            "company_name": "Innovatech Solutions",
+            "industry_sector": "Technology",
+            "country_iso_code": "USA",
+            "hasRiskProfile": {
+                "@type": "RiskProfile",
+                "management_quality_score": 8,
+                "kg_degree_centrality": 0.2439,
+                "kg_num_suppliers": 0,
+                "kg_num_customers": 2
+            }
+        },
+        {
+            "@type": "CorporateEntity",
+            "company_id": "COMP001",
+            "company_name": "Innovatech Solutions",
+            "industry_sector": "Technology",
+            "country_iso_code": "USA",
+            "hasRiskProfile": {
+                "@type": "RiskProfile",
+                "management_quality_score": 8,
+                "kg_degree_centrality": 0.2439,
+                "kg_num_suppliers": 0,
+                "kg_num_customers": 2
+            }
+        },
+        {
+            "@type": "CorporateEntity",
+            "company_id": "COMP002",
+            "company_name": "GreenBuild Corp",
+            "industry_sector": "Construction",
+            "country_iso_code": "CAN",
+            "hasRiskProfile": {
+                "@type": "RiskProfile",
+                "management_quality_score": 7,
+                "kg_degree_centrality": 0.2195,
+                "kg_num_suppliers": 1,
+                "kg_num_customers": 1
+            }
+        },
+        {
+            "@type": "CorporateEntity",
+            "company_id": "COMP003",
+            "company_name": "HealthFirst Pharma",
+            "industry_sector": "Pharmaceuticals",
+            "country_iso_code": "GBR",
+            "hasRiskProfile": {
+                "@type": "RiskProfile",
+                "management_quality_score": 9,
+                "kg_degree_centrality": 0.1951,
+                "kg_num_suppliers": 0,
+                "kg_num_customers": 2
+            }
+        },
+        {
+            "@type": "CorporateEntity",
+            "company_id": "COMP004",
+            "company_name": "Global Logistics Inc",
+            "industry_sector": "Logistics",
+            "country_iso_code": "DEU",
+            "hasRiskProfile": {
+                "@type": "RiskProfile",
+                "kg_degree_centrality": 0.122,
+                "kg_num_suppliers": 0,
+                "kg_num_customers": 1
+            }
+        }
+    ]
+}

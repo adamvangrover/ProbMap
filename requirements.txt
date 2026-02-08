@@ -18,3 +18,4 @@ openpyxl>=3.0.0
 # itsdangerous (for secure cookie signing, if used)
 # ujson (faster JSON, optional, FastAPI might use it if available)
 # orjson (another faster JSON, optional)
+torch>=2.0.0

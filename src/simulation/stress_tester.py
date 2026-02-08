@@ -150,9 +150,6 @@ class StressTester:
             # If 'original_pd_estimate' is reliably passed through by ScenarioGenerator, use that.
             # Otherwise, it might be better to recalculate or set to N/A.
             original_pd_to_log = shocked_row.get('original_pd_estimate', "N/A")
-            if original_pd_to_log == "N/A" and 'pd_estimate' in base_portfolio_df.columns: # if base_portfolio_df was accessible and had it
-                 original_pd_to_log = base_portfolio_df.loc[index, 'pd_estimate'] # This is conceptual as base_portfolio_df isn't directly here.
-
 
             stressed_item = {
                 "loan_id": loan_id,

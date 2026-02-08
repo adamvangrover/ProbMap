@@ -84,3 +84,37 @@ class LoanPricingResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class SimulationRequest(BaseModel):
+    initial_state: Optional[List[float]] = None
+    steps: int = Field(50, gt=0, le=1000, description="Number of future steps to simulate.")
+    context_data: Optional[List[List[float]]] = Field(None, description="Historical states for in-context adaptation (few-shot learning).")
+
+class SimulationResponse(BaseModel):
+    trajectory: List[List[float]] = Field(..., description="Projected sequence of states.")
+    final_state: List[float] = Field(..., description="The final state vector.")
+
+class ExplanationRequest(BaseModel):
+    company_info: CompanyInput
+    loan_info: LoanInput
+    model_type: str = Field("PD", description="Model to explain: 'PD' or 'LGD'")
+    features_to_vary: Optional[List[str]] = Field(None, description="Specific features to vary. If empty, defaults are used.")
+
+class ExplanationResponse(BaseModel):
+    model_type: str
+    base_prediction: float
+    explanations: List[Dict[str, Any]]
+
+class NetworkRiskResponse(BaseModel):
+    company_id: str
+    contagion_score: float
+    supply_chain_analysis: Dict[str, Any]
+    degree_centrality: float
+
+class MemoRequest(BaseModel):
+    company_id: str
+    loan_id: str
+
+class MemoResponse(BaseModel):
+    memo_content: str

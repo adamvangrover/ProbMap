@@ -18,6 +18,14 @@ This project aims to develop a proof of concept for a proprietary credit risk sy
 - \`requirements.txt\`: Python dependencies for the project.
 - \`.env.example\`: Example environment variables. Copy to \`.env\` and customize.
 
+## New Features (v1.1)
+
+### One-Shot World Model (OSWM)
+A new simulation engine located in `src/simulation/oswm.py` that uses Transformers for in-context learning of credit dynamics. It powers the trajectory simulations in the API and the 3D visualization.
+
+### Model Monitoring
+A comprehensive monitoring service in `src/mlops/monitoring.py` that tracks data drift, concept drift, and performance degradation for the credit risk models.
+
 ## Setup
 
 1.  Clone the repository.

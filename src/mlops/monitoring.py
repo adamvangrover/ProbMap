@@ -150,6 +150,55 @@ class ModelMonitor:
 
         return {"poc_drift_details": drift_details, "overall_drift_detected": overall_drift_detected}
 
+    def check_concept_drift(self,
+                          model_name: str,
+                          reference_data: pd.DataFrame,
+                          current_data: pd.DataFrame,
+                          target_column: str) -> Dict[str, Any]:
+        """
+        Check for concept drift (shift in P(y|X)).
+        In a PoC without ground truth for current data, we can only approximate this
+        by checking if the distribution of PREDICTED probabilities has changed significantly,
+        assuming the model has not changed.
+        """
+        if target_column not in current_data.columns:
+             # Current data lacks ground truth, so we check prediction distribution drift instead
+             # This is a proxy for concept drift or label shift
+             return self._check_prediction_drift(reference_data, current_data)
+
+        # If we had ground truth, we would compare P(y|X) or P(y)
+        # Here we just compare P(y) (prior probability shift)
+        ref_mean = reference_data[target_column].mean()
+        cur_mean = current_data[target_column].mean()
+
+        drift_detected = abs(ref_mean - cur_mean) > 0.1 # Threshold
+
+        return {
+            "type": "prior_probability_shift",
+            "reference_mean": ref_mean,
+            "current_mean": cur_mean,
+            "drift_detected": drift_detected
+        }
+
+    def _check_prediction_drift(self, reference_data: pd.DataFrame, current_data: pd.DataFrame) -> Dict[str, Any]:
+         # Assumes 'probability' column exists in both (simulated or logged)
+         if 'probability' not in reference_data.columns or 'probability' not in current_data.columns:
+             return {"status": "skipped", "reason": "probability column missing"}
+
+         ref_mean = reference_data['probability'].mean()
+         cur_mean = current_data['probability'].mean()
+
+         # KS test for distribution difference could be used here
+         # Simple mean shift check
+         drift = abs(ref_mean - cur_mean)
+
+         return {
+             "type": "prediction_drift",
+             "reference_mean_prob": ref_mean,
+             "current_mean_prob": cur_mean,
+             "drift_detected": drift > 0.1
+         }
+
     def _simulate_new_ground_truth(self,
                                    logged_predictions: List[Dict[str, Any]],
                                    model_name_filter: str,
@@ -231,7 +280,8 @@ class ModelMonitor:
                                            reference_metrics: Dict[str, float], # e.g. {"accuracy": 0.85, "roc_auc": 0.90}
                                            metric_to_check: str = "accuracy", # or "roc_auc", "mse" etc.
                                            threshold_percentage_drop: float = 10.0,
-                                           target_column_name: str = 'default_status' # For PDModel
+                                           target_column_name: str = 'default_status', # For PDModel
+                                           corruption_rate: float = 0.05
                                            ) -> Dict[str, Any]:
         """
         Checks for model performance degradation using logged predictions and simulated ground truth.
