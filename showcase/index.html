@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Risk Control Platform - Showcase</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --accent: #e74c3c;
+            --bg: #0b0c10;
+            --card-bg: #1f2833;
+            --text: #c5c6c7;
+            --header: #66fcf1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        header {
+            background-color: rgba(11, 12, 16, 0.95);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(102, 252, 241, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--header);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: color 0.3s;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .nav-links a:hover {
+            color: var(--header);
+        }
+
+        .hero {
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: radial-gradient(circle at center, #1f2833 0%, #0b0c10 70%);
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 4em;
+            margin: 0;
+            color: var(--header);
+            text-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
+        }
+
+        .hero p {
+            font-size: 1.2em;
+            max-width: 600px;
+            margin: 20px 0 40px;
+            line-height: 1.6;
+        }
+
+        .cta-button {
+            padding: 15px 40px;
+            background: transparent;
+            border: 2px solid var(--header);
+            color: var(--header);
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+
+        .cta-button:hover {
+            background: var(--header);
+            color: var(--bg);
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.6);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            padding: 80px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            transition: transform 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: var(--header);
+        }
+
+        .card h3 {
+            color: var(--header);
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+
+        .card p {
+            font-size: 0.95em;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        .card a {
+            margin-top: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+        }
+
+        .card a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            background-color: #050608;
+            padding: 40px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #666;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Background grid effect */
+        .bg-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(102, 252, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(102, 252, 241, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Risk Control AI</div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="agent_dashboard.html">Agent Dashboard</a>
+            <a href="risk_map_3d.html">3D Map</a>
+            <a href="../system_overview.html">Docs</a>
+        </div>
+    </header>
+
+    <div class="hero">
+        <div class="bg-grid"></div>
+        <h1>Autonomous<br>Risk Intelligence</h1>
+        <p>A purely additive, future-aligned platform for dynamic credit risk analysis using multi-agent swarms and one-shot world models.</p>
+        <a href="agent_dashboard.html" class="cta-button">Launch Dashboard</a>
+    </div>
+
+    <div id="features" class="features">
+        <div class="card">
+            <h3>🤖 Multi-Agent Swarm</h3>
+            <p>Experience our asynchronous agent architecture where specialized agents (Risk Analysts, Forecasters, Portfolio Managers) collaborate to assess market events in real-time.</p>
+            <a href="agent_dashboard.html">View Agent Simulation &rarr;</a>
+        </div>
+
+        <div class="card">
+            <h3>🌍 3D Probability Map</h3>
+            <p>Visualize the entire credit portfolio in an immersive 3D environment. Explore relationships between entities, risk scores, and asset classes spatially.</p>
+            <a href="risk_map_3d.html">Open 3D Map &rarr;</a>
+        </div>
+
+        <div class="card">
+            <h3>🔮 Predictive AI</h3>
+            <p>Leveraging One-Shot World Models (OSWM) and Bayesian updates to predict credit trajectories and adapt to new market regimes instantly.</p>
+            <a href="agent_dashboard.html">See Risk Trajectories &rarr;</a>
+        </div>
+
+        <div class="card">
+            <h3>🏗 System Architecture</h3>
+            <p>Deep dive into the modular, extensible design that powers our Front Office Super-App, adhering to strict architectural standards.</p>
+            <a href="../system_overview.html">Read Documentation &rarr;</a>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2024 Proprietary Risk Control System. All rights reserved. <br>
+        Powered by HNASP (Hybrid Neurosymbolic Agent State Protocol).
+    </footer>
+
+</body>
+</html>
