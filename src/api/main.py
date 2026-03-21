@@ -2,6 +2,7 @@ import logging
 from fastapi import FastAPI
 from src.core.config import settings
 from src.api import endpoints as api_endpoints # Import the router
+from src.api import bundle_endpoints # Import the bundle router
 # from src.core.logging_config import setup_logging # Already called on import in logging_config.py
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(api_endpoints.router, prefix="/api/v1", tags=["Credit Risk Services"])
+app.include_router(bundle_endpoints.router, prefix="/api/v1/bundle", tags=["Adam Sovereign Credit Bundle"])
 
 @app.on_event("startup")
 async def startup_event():

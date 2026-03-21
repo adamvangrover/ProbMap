@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adam Sovereign Credit Bundle - Probability Map</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; font-family: monospace; }
+        button { display: block; width: 100%; padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #2980b9; }
+
+        #results { margin-top: 30px; display: none; }
+        .dashboard { display: flex; gap: 20px; margin-bottom: 20px; }
+        .card { flex: 1; padding: 20px; border-radius: 6px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; color: #7f8c8d; }
+        .card .value { font-size: 24px; font-weight: bold; margin-top: 10px; }
+
+        .risk-low { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .risk-high { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .breakdown { background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e9ecef; }
+        .breakdown h3 { margin-top: 0; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
+        .breakdown ul { list-style-type: none; padding: 0; }
+        .breakdown li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .breakdown li:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Adam Sovereign Credit Bundle<br><small style="font-size: 0.6em; color: #7f8c8d;">Interactive Probability Map</small></h1>
+
+    <div class="input-group">
+        <label for="creditMemo">Paste Credit Memo / Financial Text:</label>
+        <textarea id="creditMemo" placeholder="Paste text here... (e.g. 'The borrower is facing insolvency. [doc_1:chunk_1]')"></textarea>
+    </div>
+
+    <button onclick="analyzeText()">Analyze Risk & Conviction</button>
+
+    <div id="results">
+        <div class="dashboard">
+            <div id="riskCard" class="card">
+                <h3>Risk Rating</h3>
+                <div id="riskValue" class="value">-</div>
+            </div>
+            <div class="card" style="background: #e2e3e5; border: 1px solid #d6d8db;">
+                <h3>Conviction Score</h3>
+                <div id="convictionValue" class="value">-</div>
+            </div>
+        </div>
+
+        <div class="breakdown">
+            <h3>Semantic Breakdown (Flagged Sentences)</h3>
+            <ul id="breakdownList"></ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function analyzeText() {
+        const text = document.getElementById('creditMemo').value;
+        if (!text) {
+            alert("Please enter some text to analyze.");
+            return;
+        }
+
+        const btn = document.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = "Analyzing...";
+
+        try {
+            const response = await fetch('/api/v1/bundle/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            displayResults(data);
+        } catch (error) {
+            alert("Failed to analyze text: " + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Analyze Risk & Conviction";
+        }
+    }
+
+    function displayResults(data) {
+        const resultsDiv = document.getElementById('results');
+        const riskCard = document.getElementById('riskCard');
+        const riskValue = document.getElementById('riskValue');
+        const convictionValue = document.getElementById('convictionValue');
+        const breakdownList = document.getElementById('breakdownList');
+
+        resultsDiv.style.display = 'block';
+
+        // Update Risk Rating
+        riskValue.textContent = data.risk_rating;
+        riskCard.className = 'card ' + (data.risk_rating === 'High Risk' ? 'risk-high' : 'risk-low');
+
+        // Update Conviction Score
+        convictionValue.textContent = data.conviction_score.toFixed(2);
+
+        // Update Semantic Breakdown
+        breakdownList.innerHTML = '';
+        if (data.semantic_breakdown.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = "No specific risk keywords flagged.";
+            li.style.color = "#7f8c8d";
+            li.style.fontStyle = "italic";
+            breakdownList.appendChild(li);
+        } else {
+            data.semantic_breakdown.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                breakdownList.appendChild(li);
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
