@@ -1,1 +1,55 @@
-{}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Audit Log",
+  "description": "Schema for regulatory reporting and step-by-step provenance tracing.",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Deterministic ISO 8601 UTC timestamp of the log event."
+    },
+    "trace_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier tracking the end-to-end execution path."
+    },
+    "agent_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifier of the autonomous agent initiating the action."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Category or type of the event (e.g., tool_call, memory_access)."
+    },
+    "details": {
+      "type": "object",
+      "description": "Detailed payload or arguments specific to the event type."
+    },
+    "tool_calls": {
+      "type": "array",
+      "description": "Step-by-step history of tools executed by the agent within this trace.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool_name": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "object"
+          },
+          "result": {
+            "type": ["object", "string", "number", "boolean", "null"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "error"]
+          }
+        },
+        "required": ["tool_name", "arguments", "status"]
+      }
+    }
+  },
+  "required": ["timestamp", "trace_id", "agent_id", "event_type", "details"]
+}
